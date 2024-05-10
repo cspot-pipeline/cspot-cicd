@@ -3,15 +3,13 @@ on: push
 jobs:
   start-runner:
     name: Start self-hosted EC2 runner
-    env: 
-      AWS_ENDPOINT_URL: "http://ec2.poc.aristotle.ucsb.edu:443"
     runs-on: ubuntu-latest
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: cspot-pipeline/configure-aws-credentials-eucalyptus@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -29,17 +27,13 @@ jobs:
           security-group-id: sg-d74861a09e5a7000f
   do-the-job:
     name: Do the job on the runner
-    env: 
-      AWS_ENDPOINT_URL: "http://ec2.poc.aristotle.ucsb.edu:443"
     needs: start-runner # required to start the main job when the runner is ready
     runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
     steps:
       - name: Hello World
         run: echo 'Hello World!'
   stop-runner:
-    name: Stop self-hosted EC2 runner
-    env: 
-      AWS_ENDPOINT_URL: "http://ec2.poc.aristotle.ucsb.edu:443"
+
     needs:
       - start-runner # required to get output from the start-runner job
       - do-the-job # required to wait when the main job is done
@@ -47,7 +41,7 @@ jobs:
     if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: cspot-pipeline/configure-aws-credentials-eucalyptus@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
