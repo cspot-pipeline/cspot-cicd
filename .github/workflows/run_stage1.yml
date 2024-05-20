@@ -1,0 +1,9 @@
+name: Run Stage 1
+
+on: push
+
+jobs:
+  example-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./stage1.sh
