@@ -13,5 +13,5 @@ jobs:
         run: pwd
       - name: Run script file
         run: |
-          chmod +x .github/stage1.sh
+          chmod +x ./.github/stage1.sh
           ./stage1.sh
