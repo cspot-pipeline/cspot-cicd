@@ -7,6 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/checkout@v4
+      - name: ls
+        run: ls
+      - name: pwd
+        run: pwd
       - name: Run script file
         run: bash ./.github/stage1.sh
         shell: bash
