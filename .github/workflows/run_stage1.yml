@@ -5,5 +5,8 @@ on: push
 jobs:
   example-job:
     runs-on: ubuntu-latest
-    steps:
-      - run: ./stage1.sh
+    steps: 
+      - name: Check out the repository to the runner
+        uses: actions/checkout@v4  
+      - name: Run a script
+        run: ./my-script.sh
