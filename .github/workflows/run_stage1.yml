@@ -9,6 +9,6 @@ jobs:
       - name: Check out the repository to the runner
         uses: actions/checkout@v4
       - name: Make executable
-        run: chmod 750 ./stage1.sh
+        run: chmod +x stage1.sh
       - name: Run a script
         run: ./stage1.sh
