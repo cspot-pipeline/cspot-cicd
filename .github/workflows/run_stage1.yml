@@ -3,10 +3,12 @@ name: Run Stage 1.
 on: push
 
 jobs:
-  example-job:
+  run-stage-1:
     runs-on: ubuntu-latest
     steps: 
-      - name: Check out the repository to the runner
-        uses: actions/checkout@v4
-      - name: Run a script
-        run: ./stage1.sh
+      - uses: actions/checkout@v4
+      - name: Run script file
+        run: |
+         chmod +x ./stage1.sh
+         ./stage1.sh
+        shell: bash
