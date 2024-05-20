@@ -12,5 +12,5 @@ jobs:
       - name: pwd
         run: pwd
       - name: Run script file
-        run: bash ./.github/stage1.sh
+        run: /home/runner/work/cspot-cicd/cspot-cicd/.github/stage1.sh
         shell: bash
