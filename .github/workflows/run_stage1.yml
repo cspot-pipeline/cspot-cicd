@@ -12,4 +12,6 @@ jobs:
       - name: pwd
         run: pwd
       - name: Run script file
-        run: /home/runner/work/cspot-cicd/cspot-cicd/.github/stage1.sh
+        run: |
+          chmod +x stage1.sh
+          ./stage1.sh
