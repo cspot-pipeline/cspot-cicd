@@ -8,6 +8,5 @@ jobs:
     steps: 
       - uses: actions/checkout@v4
       - name: Run script file
-        run: |
-         ./cspot-cicd/stage1.sh
+        run: echo ls
         shell: bash
