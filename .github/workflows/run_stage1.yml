@@ -8,5 +8,5 @@ jobs:
     steps: 
       - uses: actions/checkout@v4
       - name: Run script file
-        run: bash /home/runner/work/cspot-cicd/cspot-cicd/.github/stage1.sh
+        run: bash ./.github/stage1.sh
         shell: bash
