@@ -9,6 +9,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run script file
         run: |
-         chmod +x stage1.sh
-         stage1.sh
+         chmod 750 ./stage1.sh
+         ./stage1.sh
         shell: bash
