@@ -1,4 +1,4 @@
-name: Run Stage 1.
+name: Run Stage 1
 
 on: push
 
@@ -6,12 +6,21 @@ jobs:
   run-stage-1:
     runs-on: ubuntu-latest
     steps: 
-      - uses: actions/checkout@v4
-      - name: ls
-        run: ls
-      - name: pwd
-        run: pwd
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set executable permissions
         run: chmod +x stage1.sh
+
+      - name: Export AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
+
       - name: Run script file
-        run: bash ./stage1.sh
+        run: ./stage1.sh -k /path/to/your-key.pem -n your-key-name -p default
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
