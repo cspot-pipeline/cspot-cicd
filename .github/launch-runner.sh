@@ -1,18 +1,12 @@
 #!/bin/bash
 # Options:
-#  -k   Path to PEM key used to connect to the instance
 #  -n   Name of PEM key as used by AWS
-#  -p   Profile to use from AWS config (can also use environment variables)
 
 set -e
 
-while getopts "k:n:p:" opt; do
+while getopts "n:" opt; do
   case "${opt}" in
-    k) KEYFILE=$(readlink -f "${OPTARG}")
-      ;;
     n) KEYNAME=${OPTARG}
-      ;;
-    p) AWS_PROFILE="--profile ${OPTARG}"
       ;;
     *) exit
       ;;
@@ -23,10 +17,8 @@ SCRIPT_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 AMI_IMAGE=ami-6022f04a109e86a98
 REGION="eucalyptus" 
 
-#chmod 400 "${KEYFILE}"
-
 function euca() {
-   command aws ${AWS_PROFILE:-'--endpoint-url' 'http://ec2.poc.aristotle.ucsb.edu:443'} \
+   command aws --endpoint-url 'http://ec2.poc.aristotle.ucsb.edu:443' \
       --region "${REGION}" --no-paginate --no-verify-ssl --output text "$@"
 }
 
@@ -53,4 +45,5 @@ done
 echo 'Yes!'
 
 EC2_HOSTNAME="$(euca_describe | grep -m1 ASSOCIATION | awk -F' ' '{ print $3; }')"
-echo "Hostname is ${EC2_HOSTNAME}"
+
+echo "Hostname is ${EC2_HOSTNAME}" 
