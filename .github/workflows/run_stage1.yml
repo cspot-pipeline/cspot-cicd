@@ -19,7 +19,7 @@ jobs:
           echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
 
       - name: Run script file
-        run: ./stage1.sh -k $AWS_SECRET_ACCESS_KEY -n obenedek
+        run: ./stage1.sh -k ${{ secrets.AWS_SECRET_ACCESS_KEY }} -n obenedek
         
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
