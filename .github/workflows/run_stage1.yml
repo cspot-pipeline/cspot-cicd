@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set executable permissions
-        run: chmod +x stage1.sh
+        run: chmod +x stage2.sh
 
       - name: Export AWS credentials
         run: |
@@ -19,7 +19,8 @@ jobs:
           echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
 
       - name: Run script file
-        run: ./stage1.sh -k cspot_key.pem -n cspot_key.pem
+        run: ./stage2.sh -r AWS_SECRET_ACCESS_KEY -u AWS_ACCESS_KEY_ID -n obenedek
+        
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
