@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run script file
-        run: ./.github/launch-runner.sh -n obenedek
+        run: ./.github/launch-runner.sh -n CSPOT_CI-CD
         
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
