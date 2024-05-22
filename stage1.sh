@@ -56,21 +56,5 @@ EC2_HOSTNAME="$(euca_describe | grep -m1 ASSOCIATION | awk -F' ' '{ print $3; }'
 echo "Hostname is ${EC2_HOSTNAME}"
 ssh-keygen -R "${EC2_HOSTNAME}"
 
-echo 'Transferring files...'
-sleep 5 # give the system a chance to finish coming online
-
-while true; do
-  # Sometimes this fails and I DON'T KNOW WHY
-  rsync -av -e "ssh -i ${KEYFILE} -o StrictHostKeyChecking=no" \
-    "${SRC}" "${MAILRC}" \
-    "fedora@${EC2_HOSTNAME}:~/" 2> /dev/null \
-      && break
-  echo 'rsync failed, trying again.'
-  sleep 1
-done
-
-ssh -i "${KEYFILE}" "fedora@${EC2_HOSTNAME}" \
-  "sudo tar xJf $(basename "${SRC}") -C ~root"
-
 echo "Stage 1 complete. Now SSH into the EC2 instance using ssh -i '${KEYFILE}' fedora@${EC2_HOSTNAME}" \
   " and proceed to stage 2."
