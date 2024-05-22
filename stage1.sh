@@ -23,7 +23,7 @@ SCRIPT_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 AMI_IMAGE=ami-6022f04a109e86a98
 REGION="eucalyptus" 
 
-chmod 400 "${KEYFILE}"
+#chmod 400 "${KEYFILE}"
 
 function euca() {
    command aws ${AWS_PROFILE:-'--endpoint-url' 'http://ec2.poc.aristotle.ucsb.edu:443'} \
@@ -54,7 +54,3 @@ echo 'Yes!'
 
 EC2_HOSTNAME="$(euca_describe | grep -m1 ASSOCIATION | awk -F' ' '{ print $3; }')"
 echo "Hostname is ${EC2_HOSTNAME}"
-ssh-keygen -R "${EC2_HOSTNAME}"
-
-echo "Stage 1 complete. Now SSH into the EC2 instance using ssh -i '${KEYFILE}' fedora@${EC2_HOSTNAME}" \
-  " and proceed to stage 2."
