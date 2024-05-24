@@ -14,7 +14,7 @@ while getopts "n:" opt; do
 done
 
 SCRIPT_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-AMI_IMAGE=ami-6022f04a109e86a98
+AMI_IMAGE=ami-2ec1afa2c36992c55
 REGION="eucalyptus" 
 
 function euca() {
