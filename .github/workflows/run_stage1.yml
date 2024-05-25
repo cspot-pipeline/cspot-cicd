@@ -10,7 +10,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run script file
-        run: ./.github/launch-runner.sh -n CSPOT_CI-CD
+        run: |
+          ./.github/launch-runner.sh -n CSPOT_CI-CD
+          echo $EC2_HOSTNAME
         
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
