@@ -4,7 +4,7 @@
 
 set -e
 
-while getopts "k:n:p:" opt; do
+while getopts "i:" opt; do
   case "${opt}" in
     i) INSTANCE_ID=${OPTARG}
       ;;
