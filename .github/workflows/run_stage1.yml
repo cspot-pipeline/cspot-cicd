@@ -20,8 +20,9 @@ jobs:
         env:
            CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
         run: echo "curr id is $CURR_ID"
-      - name: Create Artifact
+      - name: Create artifact file
         run: echo "$CURR_ID" > curr_id.txt # Create a dummy file
+      - name: Create Artifact
         uses: actions/upload-artifact@v4
         with:
           name: curr-id
