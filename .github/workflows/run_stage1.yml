@@ -21,8 +21,9 @@ jobs:
            CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
         run: echo "curr id is $CURR_ID"
       - name: Create Artifact
+        run: echo "$CURR_ID" > curr_id.txt # Create a dummy file
         uses: actions/upload-artifact@v4
         with:
           name: curr-id
-          path: $CURR_ID
+          path: curr_id.txt
         
