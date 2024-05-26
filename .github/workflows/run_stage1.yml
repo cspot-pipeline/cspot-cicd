@@ -10,10 +10,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run script file
+        id: run-script
         run: ./.github/launch-runner.sh -n CSPOT_CI-CD
-     
-        
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Get curr ID
+        env:
+           CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
+        run: echo "curr id is $CURR_ID"
+        
