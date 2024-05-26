@@ -22,10 +22,11 @@ jobs:
         run: chmod -x ./.github/terminate.sh
       - name: Configure contents of artifact, run terminate script
         run: |
+          CURR_ID=$(cat ./.github/curr_id.txt)
+          echo "CURR_ID=${CURR_ID}" >> $GITHUB_ENV
           echo "$CURR_ID"
           ./.github/terminate.sh -i $CURR_ID
         env:
-           CURR_ID: $(cat curr_id.txt)
            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
            AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
