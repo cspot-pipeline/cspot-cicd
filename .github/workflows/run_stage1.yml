@@ -24,6 +24,7 @@ jobs:
           echo "$CURR_ID" > ./.github/curr_id.txt # Create a dummy file
           git config --global user.name 'Oscar Benedek'
           git config --global user.email 'obenedek@users.noreply.github.com'
+          git add ./.github/curr_id.txt
           git commit -m "Update ID"
           git push
       - name: Check contents of artifact
