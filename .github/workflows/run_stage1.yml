@@ -21,7 +21,7 @@ jobs:
            CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
         run: echo "curr id is $CURR_ID"
       - name: Create Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: curr-id
           path: $GITHUB_ENV
