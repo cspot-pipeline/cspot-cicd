@@ -14,8 +14,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Download Artifact
         uses: actions/download-artifact@v4
-        with:
-          name: curr-id
+      - name: Display structure of downloaded files
+        run: ls -R
       - name: Configure contents of artifact
         run: CURR_ID=$(cat curr_id.txt)
       - name: Run terminate script
