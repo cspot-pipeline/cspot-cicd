@@ -17,7 +17,7 @@ jobs:
         with:
           name: curr-id
           run-id: ${{ github.event.run_stage1.id }}
-          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Configure contents of artifact
         run: CURR_ID=$(cat curr_id.txt)
       - name: Run terminate script
