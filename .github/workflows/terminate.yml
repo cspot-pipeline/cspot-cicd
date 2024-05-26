@@ -20,6 +20,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Configure contents of artifact
         run: CURR_ID=$(cat curr_id.txt)
+      - name: Craft Executable
+        run: chmod -x ./.github/terminate.sh
+      - name: Check Contents of ID
+        run: echo "${CURR_ID}"
       - name: Run terminate script
         run: ./.github/terminate.sh -i $CURR_ID
         env:
