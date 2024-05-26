@@ -46,4 +46,5 @@ echo 'Yes!'
 
 EC2_HOSTNAME="$(euca_describe | grep -m1 ASSOCIATION | awk -F' ' '{ print $3; }')"
 
-echo "Hostname is ${EC2_HOSTNAME}" 
+echo "Hostname is ${EC2_HOSTNAME}"
+echo "${CURR_IP}=${EC2_HOSTNAME}" >> "$GITHUB_ENV"
