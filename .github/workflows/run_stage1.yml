@@ -12,7 +12,7 @@ jobs:
       - name: Run script file
         run: ./.github/launch-runner.sh -n CSPOT_CI-CD
       - name: Terminate instance
-        run: ./.github/terminate.sh -i ${{INSTANCE_ID}}
+        run: ./.github/terminate.sh -i ${INSTANCE_ID}
         
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
