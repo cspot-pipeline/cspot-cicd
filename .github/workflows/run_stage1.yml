@@ -21,7 +21,7 @@ jobs:
            CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
         run: echo "curr id is $CURR_ID"
       - name: Create artifact file
-        run: echo "$CURR_ID" > ./.github/curr_id.txt # Create a dummy file
+        run: echo "123" > ./.github/curr_id.txt # Create a dummy file
       - name: Check contents of artifact
         run: cat ./.github/curr_id.txt
       - name: Create Artifact
