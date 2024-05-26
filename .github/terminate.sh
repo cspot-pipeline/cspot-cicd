@@ -1,6 +1,6 @@
 #!/bin/bash
 # Options:
-#  -i instance id
+#  -i  instance id
 
 set -e
 
