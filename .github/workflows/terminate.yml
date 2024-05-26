@@ -1,0 +1,25 @@
+name: Terminate Instance
+
+on:
+  workflow_run:
+    workflows: ["Run Stage 1"]
+    types:
+      - completed
+
+jobs:
+  run-stage-1:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: curr-id
+          path: .
+      - name: Run terminate script
+        run: ./.github/terminate.sh -i $CURR_ID
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
