@@ -19,7 +19,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Craft Executable
-        run: chmod -x ./.github/terminate.sh
+        run: chmod 755 ./.github/terminate.sh
       - name: Configure contents of artifact, run terminate script
         run: |
           CURR_ID=$(cat ./.github/curr_id.txt)
