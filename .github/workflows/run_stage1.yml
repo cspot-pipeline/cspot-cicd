@@ -22,6 +22,10 @@ jobs:
         run: |
           echo "curr id is $CURR_ID"
           echo "$CURR_ID" > ./.github/curr_id.txt # Create a dummy file
+          git config --global user.name 'Oscar Benedek'
+          git config --global user.email 'obenedek@users.noreply.github.com'
+          git commit -m "Update ID"
+          git push
       - name: Check contents of artifact
         run: cat ./.github/curr_id.txt
       - name: Create Artifact
