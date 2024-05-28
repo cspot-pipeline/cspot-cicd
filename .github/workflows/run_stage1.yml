@@ -3,7 +3,7 @@ name: Run Stage 1
 on: push
 
 jobs:
-  run-stage-1:
+  launch-instance:
     runs-on: ubuntu-latest
     outputs:
       CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
@@ -14,28 +14,34 @@ jobs:
       - name: Run script file
         id: run-script
         # run: ./.github/launch-runner.sh -n CSPOT_CI-CD
-        run: exit 1
+        run: /bin/true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
   main-step:
-    needs: run-stage-1
+    needs: launch-instance
     runs-on: [self-hosted, Linux, X64]
+    continue-on-error: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: test lol
-        run: echo CURR_ID = ${CURR_ID}
-        env:
-           CURR_ID: ${{ needs.run-stage-1.outputs.CURR_ID }}
+        run: /bin/false
 
+  # this is here so terminate will wait for main-step but still will run IFF launch-instance succeeded
+  # dummy:
+  #   if: always()
+  #   needs: [main-step]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: dsag
+  #       run: /bin/true
 
   terminate-runner:
-    needs: [run-stage-1, main-step]
+    needs: [main-step, launch-instance]
     runs-on: ubuntu-latest
-    if: needs.run-stage-1.result == 'success'
     steps: 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,4 +53,4 @@ jobs:
            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
            AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-           CURR_ID: ${{ needs.run-stage-1.outputs.CURR_ID }}
+           CURR_ID: ${{ needs.launch-instance.outputs.CURR_ID }}
