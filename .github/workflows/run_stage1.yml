@@ -13,22 +13,22 @@ jobs:
 
       - name: Run script file
         id: run-script
-        # run: ./.github/launch-runner.sh -n CSPOT_CI-CD
-        run: /bin/false
+        run: ./.github/launch-runner.sh -n CSPOT_CI-CD
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
-  main-step:
+  cspot-build-test:
     needs: launch-instance
     runs-on: [self-hosted, Linux, X64]
     continue-on-error: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: test lol
-        run: /bin/true
+      - name: build & install
+        run: ./build-install.sh
+      # - name: test
 
   terminate-runner:
     needs: [main-step, launch-instance]
