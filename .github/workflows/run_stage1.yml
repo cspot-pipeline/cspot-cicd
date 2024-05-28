@@ -19,19 +19,25 @@ jobs:
       - name: Get curr ID, fill file
         env:
            CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
+
+  main-step:
+  needs: run-stage-1
+    runs-on: cspot-runner
+    steps:
+      - run: echo hi
+
+  terminate-runner:
+    needs: main-step
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: run terminate script
         run: |
-          echo "curr id is $CURR_ID"
-          echo "$CURR_ID" > ./.github/curr_id.txt # Create artifact file
-          git config --global user.name 'Oscar Benedek'
-          git config --global user.email 'obenedek@users.noreply.github.com'
-          git add ./.github/curr_id.txt
-          git commit -m "Update ID"
-          git push
-      - name: Check contents of artifact
-        run: cat ./.github/curr_id.txt
-      - name: Create Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: curr-id
-          path: ./.github/curr_id.txt
-        
+          echo "$CURR_ID"
+          ./.github/terminate.sh -i $CURR_ID
+        env:
+           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+           CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
