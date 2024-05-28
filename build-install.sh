@@ -9,4 +9,4 @@ cd build/
 
 cmake -G Ninja ..
 ninja
-ninja install
+sudo ninja install

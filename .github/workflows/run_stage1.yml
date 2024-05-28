@@ -31,7 +31,7 @@ jobs:
       # - name: test
 
   terminate-runner:
-    needs: [main-step, launch-instance]
+    needs: [cspot-build-test, launch-instance]
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout repository
