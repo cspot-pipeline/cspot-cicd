@@ -28,16 +28,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: test lol
-        run: /bin/false
-
-  # this is here so terminate will wait for main-step but still will run IFF launch-instance succeeded
-  # dummy:
-  #   if: always()
-  #   needs: [main-step]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: dsag
-  #       run: /bin/true
+        run: /bin/true
 
   terminate-runner:
     needs: [main-step, launch-instance]
