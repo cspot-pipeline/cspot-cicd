@@ -10,8 +10,8 @@ json_response=$(
       -H "Accept: application/vnd.github+json" \
       -H "Authorization: Bearer $GITHUB_TOKEN}" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
-      https://api.github.com/repos/cspot-pipeline/cspot-cicd/actions/runners/generate-jitconfig \
-      -d '{"name":"cspot-runner", "runner_group_id": 1, "labels":["self-hosted","X64","Linux"], "work_folder": "_work"')
+      https://api.github.com/orgs/cspot-pipeline/actions/runners/generate-jitconfig \
+      -d '{"name":"cspot-runner","labels":["self-hosted","X64","Linux"]')
 
 # Print the JSON response to verify
 echo "$json_response"
