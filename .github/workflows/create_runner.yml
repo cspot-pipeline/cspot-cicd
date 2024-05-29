@@ -19,3 +19,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
