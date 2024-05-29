@@ -27,8 +27,7 @@ if __name__ == "__main__":
 		create_output = aws('ec2', 'run-instances', \
 						'--key-name', args.key_name, \
 						'--image-id', AMI_IMAGE, \
-						'--instance-type', 't2.xlarge', \
-				   		'--user-data', file://add_runner.sh -t ADD_RUNNER)
+						'--instance-type', 't2.xlarge')
 	except CalledProcessError as error:
 		print(error.output)
 		exit(error.returncode)
