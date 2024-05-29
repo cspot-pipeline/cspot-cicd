@@ -7,6 +7,7 @@ from time import sleep
 
 REGION = 'eucalyptus'
 AMI_IMAGE = 'ami-2ec1afa2c36992c55'
+ADD_RUNNER = os.environ['ADD_RUNNER']
 
 
 def aws(*args) -> str:
