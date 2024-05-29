@@ -1,32 +1,24 @@
 #!/bin/bash
-# Options:
-#  -i  instance id
+# Usage: ./terminate.sh <instance-id>
 
 set -e
 
-while getopts "i:" opt; do
-  case "${opt}" in
-    i) INSTANCE_ID=${OPTARG}
-      ;;
-    *) exit
-      ;;
-  esac
-done
+INSTANCE_ID="$1"
 
-SCRIPT_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 REGION="eucalyptus"
 
-#chmod 400 "${KEYFILE}"
-
 function euca() {
-   command aws ${AWS_PROFILE:-'--endpoint-url' 'http://ec2.poc.aristotle.ucsb.edu:443'} \
+   command aws --endpoint-url 'http://ec2.poc.aristotle.ucsb.edu:443' \
       --region "${REGION}" --no-paginate --no-verify-ssl --output text "$@"
 }
 
 echo 'Terminating instance...'
-EC2_INSTANCE="$(euca ec2 terminate-instances \
-                    --instance-ids "${INSTANCE_ID}" \
-                | grep INSTANCES \
-                | awk -F' ' '{ print $6; }')"
+euca ec2 terminate-instances --instance-ids "${INSTANCE_ID}"
+status=$?
+if [ $status -eq 0 ]; then
+  echo "Terminated instance with ID ${INSTANCE_ID}."
+else
+  echo "Failed to terminate instance" >&2
+fi
+exit $status
 
-echo "Terminated instance with ID ${INSTANCE_ID}."

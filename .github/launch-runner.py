@@ -20,7 +20,6 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', '--key-name', type=str, help='Name of PEM key as used by AWS')
 	args = parser.parse_args()
-	# breakpoint()
 
 	print('Creating instance...')
 	try:
