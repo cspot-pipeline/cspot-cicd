@@ -5,7 +5,7 @@ json_response=$(
     curl -L \
       -X POST \
       -H "Accept: application/vnd.github+json" \
-      -H "Authorization: Bearer ${GH_PERSONAL_ACCESS_TOKEN}}" \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}}" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
       https://api.github.com/repos/cspot-pipeline/cspot-cicd/actions/runners/generate-jitconfig \
       -d '{"name":"cspot-runner","labels":["self-hosted","X64","Linux"]')
