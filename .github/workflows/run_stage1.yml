@@ -13,7 +13,7 @@ jobs:
 
       - name: Run script file
         id: run-script
-        run: .github/launch-runner.py -n CSPOT_CI-CD
+        run: INPUT_STORE=$ADD_RUNNER .github/launch-runner.py -n CSPOT_CI-CD
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
