@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check github token
-echo $GITHUB_TOKEN
+echo $ADD_RUNNER
 
 # Perform the curl call and store the JSON response in a variable
 json_response=$(
