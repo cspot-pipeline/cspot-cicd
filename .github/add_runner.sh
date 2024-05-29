@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Options:
+#  -t   PAT token
+
+set -e
+
+while getopts "t:" opt; do
+  case "${opt}" in
+    t) ADD_RUNNER=${OPTARG}
+      ;;
+    *) exit
+      ;;
+  esac
+done
+
 token_json=$(curl -L \
   -X POST \
   -H "Accept: application/vnd.github+json" \
