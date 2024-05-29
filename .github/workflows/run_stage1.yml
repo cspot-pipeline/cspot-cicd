@@ -26,8 +26,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      # - name: build & install
-      #   run: ./build-install.sh
+      - name: build & install
+        run: ./build-install.sh
       # - name: test
 
   terminate-runner:
