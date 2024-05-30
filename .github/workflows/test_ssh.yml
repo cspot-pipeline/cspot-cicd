@@ -12,7 +12,7 @@ jobs:
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 169.231.230.172
+          host: 169.231.230.70
           username: cloud-user
           key: $SSH_KEY
           port: 22
