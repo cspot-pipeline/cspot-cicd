@@ -89,12 +89,13 @@ jobs:
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
+          envs: TOKEN
           host: ${{ env.PUBLIC_IP }}
           username: cloud-user
           key: $SSH_KEY
           port: 22
           script: |
-            ~/connect_runner.sh -t $TOKEN
+            ~/connect_runner.sh
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
