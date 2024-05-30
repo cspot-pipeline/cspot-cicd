@@ -68,7 +68,7 @@ jobs:
           username: cloud-user
           key: $SSH_KEY
           port: 22
-          script: ./.github/connect_runner.sh -t $TOKEN
+          script: echo "test"
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
