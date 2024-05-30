@@ -45,6 +45,6 @@ if __name__ == "__main__":
 		sleep(5)
 
 	with open(os.environ['GITHUB_OUTPUT'], 'a+') as gh_output:
-		gh_output.write(f'CURR_ID={ec2_instance}')
-		gh_output.write(f'PUBLIC_IP={public_ip}')
+		gh_output.write(f'CURR_ID={ec2_instance}\n')
+		gh_output.write(f'PUBLIC_IP={public_ip}\n')
 
