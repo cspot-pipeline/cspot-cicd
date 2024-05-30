@@ -67,7 +67,7 @@ jobs:
           host: ${{ env.PUBLIC_IP }}
           username: cloud-user
           key: $SSH_KEY
-          port: 22
+          app_port: 22
           script: ~/connect_runner.sh -t $TOKEN
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
