@@ -37,6 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - name: check IP
+        run: |
+          echo "PUBLIC_IP: ${PUBLIC_IP}"
+        env:
+          PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
