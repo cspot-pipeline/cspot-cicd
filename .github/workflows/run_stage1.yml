@@ -44,6 +44,7 @@ jobs:
           echo "PUBLIC_IP: ${PUBLIC_IP}"
           echo "CURR_ID: ${CURR_ID}"
           echo "SSH_KEY: ${SSH_KEY}"
+          sleep 20s
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
           CURR_ID: ${{ needs.launch-instance.outputs.CURR_ID }}
