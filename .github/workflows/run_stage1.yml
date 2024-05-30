@@ -49,7 +49,7 @@ jobs:
         env:
           ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
 
-  ssh-connect:
+  ssh-connect1:
     needs: [launch-instance, config-runner]
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -61,17 +61,6 @@ jobs:
           echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
-      - name: pre-connect to ssh for key exchange
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.PUBLIC_IP }}
-          username: cloud-user
-          key: $SSH_KEY
-          port: 22
-          script: ~/connect_runner.sh -t $TOKEN
-        env:
-          SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
-          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -79,13 +68,39 @@ jobs:
           username: cloud-user
           key: $SSH_KEY
           port: 22
-          script: ~/connect_runner.sh -t $TOKEN
+          script: echo "setting up ssh connection"
+        env:
+          SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
+          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
+
+  
+  ssh-connect2:
+    needs: [launch-instance, config-runner, ssh-connect1]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set IP to Env Var
+        run: |
+          echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
+        env:
+          PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.PUBLIC_IP }}
+          username: cloud-user
+          key: $SSH_KEY
+          port: 22
+          script: |
+            ~/connect_runner.sh -t $TOKEN
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
 
   terminate-runner:
-    needs: [cspot-build-test, launch-instance, ssh-connect]
+    needs: [cspot-build-test, launch-instance, ssh-connect2]
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout repository
