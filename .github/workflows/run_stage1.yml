@@ -51,7 +51,8 @@ jobs:
         with:
           host: $PUBLIC_IP
           username: cloud-user
-          key: ${{ secrets.CICD_SSH_KEY }}
+          key: |
+            ${{ secrets.CICD_SSH_KEY }}
           port: 22
           script: echo "test"
         env:
