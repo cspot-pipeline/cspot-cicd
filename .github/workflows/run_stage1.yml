@@ -49,8 +49,8 @@ jobs:
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${PUBLIC_IP}
-          username: CSPOT_CI-CD
+          host: $PUBLIC_IP
+          username: cloud-user
           key: ${{ secrets.CICD_SSH_KEY }}
           port: 22
           script: echo "test"
