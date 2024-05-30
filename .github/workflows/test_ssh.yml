@@ -1,4 +1,4 @@
-name: Test ssh
+name: Test ssh.
 
 on: push
 
