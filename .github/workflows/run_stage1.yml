@@ -40,7 +40,7 @@ jobs:
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: $PUBLIC_IP
+          host: ${PUBLIC_IP}
           username: CSPOT_CI-CD
           key: ${{ secrets.CICD_SSH_KEY }}
           port: 22
