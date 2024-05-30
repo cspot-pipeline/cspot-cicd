@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
+      PUBLIC_IP: ${{ steps.run-script.outputs.PUBLIC_IP }}
     steps: 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,8 +32,50 @@ jobs:
         run: ./build-install.sh
       # - name: test
 
+  config-runner:
+    needs: launch-instance
+    runs-on: ubuntu-latest
+    outputs:
+      TOKEN: ${{ steps.run-config.outputs.token }}
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: run config script
+        id: run-config
+        run: |
+          echo "TOKEN: ${TOKEN}"
+          ./.github/config_runner.sh -t $ADD_RUNNER
+        env:
+          ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
+
+  ssh-connect:
+    needs: [launch-instance, config-runner]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set IP to Env Var
+        run: |
+          echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
+        env:
+          PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.PUBLIC_IP }}
+          username: cloud-user
+          key: $SSH_KEY
+          port: 22
+          script: |
+            ./.github/connect_runner.sh -t $TOKEN
+        env:
+          SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
+          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
+
   terminate-runner:
-    needs: [cspot-build-test, launch-instance]
+    needs: [cspot-build-test, launch-instance, ssh-connect]
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout repository

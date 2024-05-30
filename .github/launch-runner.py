@@ -27,14 +27,14 @@ if __name__ == "__main__":
 		create_output = aws('ec2', 'run-instances', \
 						'--key-name', args.key_name, \
 						'--image-id', AMI_IMAGE, \
-						'--instance-type', 't2.xlarge', \
-				   		'--user-data', ./add_runner.sh -t ADD_RUNNER)
+						'--instance-type', 't2.xlarge')
 	except CalledProcessError as error:
 		print(error.output)
 		exit(error.returncode)
 
 	ec2_instance = json.loads(create_output)['Instances'][0]['InstanceId']
-	print(f'Created new instance with ID {ec2_instance}.')
+	public_ip = json.loads(create_output)['Instances'][0]['PublicIpAddress']
+	print(f'Created new instance with ID {ec2_instance} at public IP {public_ip}.')
 
 	while True:
 		print('Checking if instance is live...', end='')
@@ -45,5 +45,6 @@ if __name__ == "__main__":
 		sleep(5)
 
 	with open(os.environ['GITHUB_OUTPUT'], 'a+') as gh_output:
-		gh_output.write(f'CURR_ID={ec2_instance}')
+		gh_output.write(f'CURR_ID={ec2_instance}\n')
+		gh_output.write(f'PUBLIC_IP={public_ip}\n')
 
