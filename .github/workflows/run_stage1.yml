@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
+      PUBLIC_IP: ${{ steps.run-script.outputs.PUBLIC_IP }}
     steps: 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +31,22 @@ jobs:
       - name: build & install
         run: ./build-install.sh
       # - name: test
+
+  ssh-connect:
+    needs: launch-instance
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: $PUBLIC_IP
+          username: CSPOT_CI-CD
+          key: ${{ secrets.CICD_SSH_KEY }}
+          port: 22
+          script: echo "test"
+        env:
+          PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
 
   terminate-runner:
     needs: [cspot-build-test, launch-instance]
