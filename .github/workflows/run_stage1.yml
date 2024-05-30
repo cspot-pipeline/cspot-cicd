@@ -37,13 +37,15 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: check IP
         run: |
           echo "PUBLIC_IP: ${PUBLIC_IP}"
           echo "CURR_ID: ${CURR_ID}"
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
-          CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
+          CURR_ID: ${{ needs.launch-instance.outputs.CURR_ID }}
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
