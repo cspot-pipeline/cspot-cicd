@@ -33,7 +33,8 @@ if __name__ == "__main__":
 		exit(error.returncode)
 
 	ec2_instance = json.loads(create_output)['Instances'][0]['InstanceId']
-	print(f'Created new instance with ID {ec2_instance}.')
+	public_ip = json.loads(create_output)['PublicIpAddress']
+	print(f'Created new instance with ID {ec2_instance} at public IP {public_ip}.')
 
 	while True:
 		print('Checking if instance is live...', end='')
@@ -45,4 +46,5 @@ if __name__ == "__main__":
 
 	with open(os.environ['GITHUB_OUTPUT'], 'a+') as gh_output:
 		gh_output.write(f'CURR_ID={ec2_instance}')
+		gh_output.write(f'PUBLIC_IP={public_ip}')
 
