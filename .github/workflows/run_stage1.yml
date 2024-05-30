@@ -32,8 +32,25 @@ jobs:
         run: ./build-install.sh
       # - name: test
 
-  ssh-connect:
+  config-runner:
     needs: launch-instance
+    runs-on: ubuntu-latest
+    outputs:
+      TOKEN: ${{ steps.run-config.outputs.token }}
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: run config script
+        id: run-config
+        run: |
+          echo "TOKEN: ${TOKEN}"
+          ./.github/config_runner.sh -t $ADD_RUNNER
+        env:
+          ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
+
+  ssh-connect:
+    needs: [launch-instance, config-runner]
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -51,9 +68,11 @@ jobs:
           username: cloud-user
           key: $SSH_KEY
           port: 22
-          script: echo "test"
+          script: |
+            ./.github/connect_runner.sh -t $TOKEN
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
+          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
 
   terminate-runner:
     needs: [cspot-build-test, launch-instance, ssh-connect]
