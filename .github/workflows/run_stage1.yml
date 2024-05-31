@@ -49,7 +49,10 @@ jobs:
           TOKEN: ${{ needs.add-runner-to-repo.outputs.TOKEN }}
         run: echo TOKEN=$TOKEN
       - name: Dummy SSH run to fix stuff
-        run: ssh cloud-user@${PUBLIC_IP} || true
+        run: |
+          while true; do
+            (ssh cloud-user@${PUBLIC_IP} 'logout' && break) || true
+          done
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
       - name: executing remote ssh commands using ssh key
