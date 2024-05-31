@@ -22,7 +22,7 @@ token_json=$(curl -L \
   https://api.github.com/repos/cspot-pipeline/cspot-cicd/actions/runners/registration-token)
 
 token=$(echo "$token_json" | jq -r '.token')
-echo "Token: $token"
+echo "TOKEN=$token" | tee $GITHUB_OUTPUT
 
 curr_runners=$(curl -L \
   -H "Accept: application/vnd.github+json" \
