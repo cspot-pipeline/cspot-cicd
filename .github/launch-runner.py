@@ -6,7 +6,7 @@ import os
 from time import sleep
 
 REGION = 'eucalyptus'
-AMI_IMAGE = 'ami-23efaadbaa804a39a'
+AMI_IMAGE = 'ami-97b07ba03fe3f6a93'
 
 
 def aws(*args) -> str:
