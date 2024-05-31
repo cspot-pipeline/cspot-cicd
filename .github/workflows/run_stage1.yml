@@ -95,7 +95,7 @@ jobs:
           key: $SSH_KEY
           port: 22
           script: |
-            ~/connect_runner.sh
+            ~/connect_runner.sh < $TOKEN
         env:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
