@@ -50,6 +50,10 @@ jobs:
         run: ssh cloud-user@${PUBLIC_IP} || true
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
+      - name: Check Token
+        env:
+          TOKEN: ${{ needs.add-runner-to-repo.outputs.TOKEN }}
+        run: echo TOKEN=$TOKEN
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         env:
