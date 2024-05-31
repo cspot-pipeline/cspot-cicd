@@ -51,6 +51,7 @@ jobs:
       - name: Dummy SSH run to fix stuff
         run: |
           set +e # disable stop-on-error
+          mkdir ~/.ssh
           touch ~/.ssh/known_hosts
           while true; do
             ssh-keygen -R ${PUBLIC_IP}
