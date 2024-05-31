@@ -24,16 +24,14 @@ jobs:
     needs: launch-instance
     runs-on: ubuntu-latest
     outputs:
-      TOKEN: ${{ steps.run-config.outputs.token }}
+      TOKEN: ${{ steps.run-config.outputs.TOKEN }}
     continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: run config script
         id: run-config
-        run: |
-          echo "TOKEN: ${TOKEN}"
-          ./.github/config_runner.sh -t $ADD_RUNNER
+        run: .github/config_runner.sh -t $ADD_RUNNER
         env:
           ADD_RUNNER: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
