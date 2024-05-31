@@ -20,17 +20,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
-  cspot-build-test:
-    needs: launch-instance
-    runs-on: [self-hosted, Linux, X64]
-    continue-on-error: true
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: build & install
-        run: ./build-install.sh
-      # - name: test
-
   config-runner:
     needs: launch-instance
     runs-on: ubuntu-latest
@@ -48,41 +37,17 @@ jobs:
         env:
           ADD_RUNNER: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
-  ssh-connect1:
+  ssh-connect:
     needs: [launch-instance, config-runner]
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
       - name: Set IP to Env Var
         run: |
           echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
-      - name: executing remote ssh commands using ssh key
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.PUBLIC_IP }}
-          username: cloud-user
-          key: $SSH_KEY
-          port: 22
-          script: echo "setting up ssh connection"
-        env:
-          SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
-          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
-
-  
-  ssh-connect2:
-    needs: [launch-instance, config-runner, ssh-connect1]
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set IP to Env Var
-        run: |
-          echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
+      - name: Dummy SSH run to fix stuff
+        run: ssh cloud-user@${PUBLIC_IP} || true
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
       - name: executing remote ssh commands using ssh key
@@ -103,8 +68,19 @@ jobs:
           SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
 
+  cspot-build-test:
+    needs: [ssh-connect]
+    runs-on: [self-hosted, Linux, X64]
+    continue-on-error: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: build & install
+        run: ./build-install.sh
+      # - name: test
+
   terminate-runner:
-    needs: [cspot-build-test, launch-instance, ssh-connect2]
+    needs: [cspot-build-test, launch-instance]
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout repository
