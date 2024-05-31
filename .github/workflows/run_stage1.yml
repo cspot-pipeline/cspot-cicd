@@ -89,7 +89,7 @@ jobs:
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
-          envs: TOKEN
+          envs: $TOKEN
           host: ${{ env.PUBLIC_IP }}
           username: cloud-user
           key: $SSH_KEY
