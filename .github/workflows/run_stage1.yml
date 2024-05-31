@@ -19,7 +19,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
 
   cspot-build-test:
     needs: launch-instance
@@ -47,7 +46,7 @@ jobs:
           echo "TOKEN: ${TOKEN}"
           ./.github/config_runner.sh -t $ADD_RUNNER
         env:
-          ADD_RUNNER: ${{ secrets.ADD_RUNNER }}
+          ADD_RUNNER: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
   ssh-connect1:
     needs: [launch-instance, config-runner]
