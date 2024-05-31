@@ -20,7 +20,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
-  config-runner:
+  add-runner-to-repo:
     needs: launch-instance
     runs-on: ubuntu-latest
     outputs:
@@ -37,8 +37,8 @@ jobs:
         env:
           ADD_RUNNER: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
 
-  ssh-connect:
-    needs: [launch-instance, config-runner]
+  configure-remote-runner:
+    needs: [launch-instance, add-runner-to-repo]
     runs-on: ubuntu-latest
     steps:
       - name: Set IP to Env Var
@@ -52,11 +52,13 @@ jobs:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          TOKEN: ${{ needs.add-runner-to-repo.outputs.TOKEN }}
         with:
           envs: TOKEN
           host: ${{ env.PUBLIC_IP }}
           username: cloud-user
-          key: $SSH_KEY
+          key: ${{ secrets.CICD_SSH_KEY }}
           port: 22
           script: |
             mkdir actions-runner && cd actions-runner  
@@ -64,12 +66,9 @@ jobs:
             tar xzf ./actions-runner-linux-x64-2.316.1.tar.gz
             ./config.sh --url https://github.com/cspot-pipeline/cspot-cicd --token $TOKEN
             ./run.sh
-        env:
-          SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
-          TOKEN: ${{ needs.config-runner.outputs.TOKEN }}
 
   cspot-build-test:
-    needs: [ssh-connect]
+    needs: [configure-remote-runner]
     runs-on: [self-hosted, Linux, X64]
     continue-on-error: true
     steps:
