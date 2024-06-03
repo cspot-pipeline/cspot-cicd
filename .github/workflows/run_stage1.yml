@@ -51,7 +51,7 @@ jobs:
       - name: Dummy SSH run to fix stuff
         run: |
           set +e # disable stop-on-error
-          echo ${{ secrets.CICD_SSH_KEY }} > privkey.pem
+          echo '${{ secrets.CICD_SSH_KEY }}' > privkey.pem
           chmod 400 privkey.pem
           mkdir ~/.ssh
           touch ~/.ssh/known_hosts
