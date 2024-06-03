@@ -51,7 +51,7 @@ jobs:
       - name: Dummy SSH run to fix stuff
         run: |
           set +e # disable stop-on-error
-          echo "$PRIVKEY" > privkey.pem
+          /bin/echo "$PRIVKEY" | tee privkey.pem >/dev/null
           chmod 400 privkey.pem
           head -n1 privkey.pem
           mkdir ~/.ssh
