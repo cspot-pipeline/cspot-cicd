@@ -53,6 +53,7 @@ jobs:
           set +e # disable stop-on-error
           echo '${{ secrets.CICD_SSH_KEY }}' > privkey.pem
           chmod 400 privkey.pem
+          cat privkey.pem
           mkdir ~/.ssh
           touch ~/.ssh/known_hosts
           while true; do
