@@ -48,15 +48,16 @@ jobs:
       #   env:
       #     TOKEN: ${{ needs.add-runner-to-repo.outputs.TOKEN }}
       #   run: echo TOKEN=$TOKEN
-      # - name: Dummy SSH run to fix stuff
-      #   uses: appleboy/ssh-action@v1.0.3
-      #   with:
-      #     host: ${{ env.PUBLIC_IP }}
-      #     username: cloud-user
-      #     key: ${{ secrets.CICD_SSH_KEY }}
-      #     port: 22
-      #     script: logout
+      - name: Dummy SSH run to fix stuff
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.PUBLIC_IP }}
+          username: cloud-user
+          key: ${{ secrets.CICD_SSH_KEY }}
+          port: 22
+          script: logout
       - name: executing remote ssh commands using ssh key
+        if: always()
         uses: appleboy/ssh-action@v1.0.3
         env:
           TOKEN: ${{ needs.add-runner-to-repo.outputs.TOKEN }}
@@ -66,7 +67,6 @@ jobs:
           username: cloud-user
           key: ${{ secrets.CICD_SSH_KEY }}
           port: 22
-          timeout: 60s
           script: |
             echo TOKEN=$TOKEN
             mkdir actions-runner && cd actions-runner  
