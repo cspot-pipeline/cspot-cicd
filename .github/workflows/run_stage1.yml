@@ -53,7 +53,7 @@ jobs:
           set +e # disable stop-on-error
           echo "$PRIVKEY" > privkey.pem
           chmod 400 privkey.pem
-          cat privkey.pem
+          head -n1 privkey.pem
           mkdir ~/.ssh
           touch ~/.ssh/known_hosts
           while true; do
