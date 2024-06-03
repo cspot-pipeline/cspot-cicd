@@ -51,7 +51,7 @@ jobs:
       - name: Dummy SSH run to fix stuff
         run: |
           set +e # disable stop-on-error
-          echo '${{ secrets.CICD_SSH_KEY }}' > privkey.pem
+          echo "$PRIVKEY" > privkey.pem
           chmod 400 privkey.pem
           cat privkey.pem
           mkdir ~/.ssh
@@ -62,6 +62,7 @@ jobs:
           done
         env:
           PUBLIC_IP: ${{ needs.launch-instance.outputs.PUBLIC_IP }}
+          PRIVKEY: ${{ secrets.CICD_SSH_KEY }}
       - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         env:
