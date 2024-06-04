@@ -84,8 +84,10 @@ jobs:
         uses: actions/checkout@v4
       - name: build & install
         run: ./build-install.sh
-      # - name: test
+      - name: terminate
+        run: sudo shutdown +5 # shutdown in 5 minutes from now (should also terminate the instance)
 
+# TODO: make this only run if we don't get to the cspot-build-test job
   terminate-runner:
     needs: [cspot-build-test, launch-instance]
     if: ${{ always() && needs.launch-instance.result == 'success' }}
