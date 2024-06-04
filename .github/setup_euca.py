@@ -285,6 +285,11 @@ class Main:
 		self.close_client()  # doesn't appear to have an issue being called twice
 
 
+class DummyRunner:
+	def deregister(self):
+		return
+
+
 def cleanup():
 	global main
 	global main_instance
@@ -313,7 +318,8 @@ if __name__ == "__main__":
 	try:
 		main_runner = main.start_runner(main_instance)
 	except:
-		cleanup()
+		main_runner = DummyRunner()
+		cleanup()  # this will error otherwise since main_runner is not defined
 		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
