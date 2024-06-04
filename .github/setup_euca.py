@@ -131,10 +131,10 @@ class GHActionsRunner(dict):
 		:param host: the host (should already be connected)
 		:param url: URL of the repo on GitHub
 		"""
-		tarball_path = 'actions-runner.tar.gz'
-		host.exec_command(f'curl -o {tarball_path} -L {self.get_download_url()}')
+		tarball = 'actions-runner.tar.gz'
+		host.exec_command(f'curl -o {tarball} -L {self.get_download_url()}')
 		time.sleep(1)
-		host.exec_command('tar xzf actions-runner.tar.gz')
+		host.exec_command(f'tar xzf {tarball}')
 		time.sleep(5)
 		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
 		host.exec_command('./config.sh --unattended --no-default-labels '
