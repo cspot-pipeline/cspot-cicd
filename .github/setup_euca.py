@@ -320,7 +320,7 @@ if __name__ == "__main__":
 		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
-	while main_instance.get_state() == 'running':
+	while main_instance.get_state() != 'stopped':
 		time.sleep(30)
 
 	cleanup()
