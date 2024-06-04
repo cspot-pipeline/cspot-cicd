@@ -35,9 +35,9 @@ if __name__ == "__main__":
 	public_ip = json.loads(create_output)['Instances'][0]['PublicIpAddress']
 	print(f'Created new instance with ID {ec2_instance} at public IP {public_ip}.')
 
-	aws('ec2', 'modify-instance-attribute',
-	    '--instance-id', ec2_instance,
-	    '--instance-initiated-shutdown-behavior', '{"Value": "Terminate"}')
+	# aws('ec2', 'modify-instance-attribute',
+	#     '--instance-id', ec2_instance,
+	#     '--instance-initiated-shutdown-behavior', '{"Value": "Terminate"}')
 
 	while True:
 		print('Checking if instance is live...', end='')
