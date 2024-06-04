@@ -8,6 +8,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build & Install
-        run: ./build_install.sh
+        run: ./build-install.sh
       - name: Clean Up
         run: sudo shutdown +1
