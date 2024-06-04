@@ -160,6 +160,7 @@ class GHActionsRunner(dict):
 			print('Configuration failed due to an unknown error', file=sys.stderr)
 			exit(1)
 
+		self.should_deregister = True
 		self.update(me)
 		self.__dict__.update(me)
 
