@@ -8,9 +8,14 @@ jobs:
     outputs:
       CURR_ID: ${{ steps.run-script.outputs.CURR_ID }}
       PUBLIC_IP: ${{ steps.run-script.outputs.PUBLIC_IP }}
-    steps: 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install boto3
 
       - name: Run script file
         id: run-script
