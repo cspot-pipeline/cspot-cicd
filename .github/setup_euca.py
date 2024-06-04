@@ -282,8 +282,15 @@ class Main:
 		self.close_client()  # doesn't appear to have an issue being called twice
 
 
-class DummyRunner:
+class Dummy:
+	"""
+	Dummy class to act as placeholder in case cleanup() is called before runner/instance
+	gets created
+	"""
 	def deregister(self):
+		return
+
+	def terminate(self):
 		return
 
 
@@ -304,6 +311,10 @@ if __name__ == "__main__":
 
 	main = Main(os.environ)
 
+	# safely handle early cleanup()
+	main_runner = Dummy()
+	main_instance = Dummy()
+
 	try:
 		main_instance = main.create_instance(args.key_name)
 	except botocore.exceptions.ClientError as err:
@@ -315,7 +326,7 @@ if __name__ == "__main__":
 	try:
 		main_runner = main.start_runner(main_instance)
 	except:
-		main_runner = DummyRunner()
+		print('Error: failed to start self-hosted runner', file=sys.stderr)
 		cleanup()  # this will error otherwise since main_runner is not defined
 		exit(1)
 
