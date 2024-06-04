@@ -88,6 +88,7 @@ jobs:
 
   terminate-runner:
     needs: [cspot-build-test, launch-instance]
+    if: ${{ always() && !cancelled() && needs.launch-instance.result == 'success' }}
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout repository
