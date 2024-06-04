@@ -143,7 +143,7 @@ class GHActionsRunner(dict):
 						  f'--labels {",".join(self.labels)} '
 						  ' && bash -c "nohup ./run.sh &"')
 		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
-		time.sleep(45)  # <-- increase to 40-60 if this is too short
+		time.sleep(90)  # <-- increase to 40-60 if this is too short
 
 		# add info about ourself to the `self` object
 		response = requests.get(GHActionsRunner.API_URL,
