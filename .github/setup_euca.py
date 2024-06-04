@@ -212,7 +212,7 @@ class Main:
 		print(f'Created new instance with ID {instance_id} at public IP {public_ip}.')
 
 		start_time = time.time()
-		while time.time() - start_time < self.ENV.EC2_CREATE_TIMEOUT:
+		while time.time() - start_time < int(self.ENV.EC2_CREATE_TIMEOUT):
 			print('Checking if instance is live...', end='')
 			if 'running' in ec2_instance.get_state():
 				print('Yes!')
@@ -286,6 +286,9 @@ class Main:
 
 
 def cleanup():
+	global main
+	global main_instance
+	global main_runner
 	print("Cleaning up")
 	main_instance.terminate()  # needs to be called before the boto client is closed!
 	main_runner.deregister()
@@ -298,10 +301,6 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	main = Main(os.environ)
-
-	main_runner = GHActionsRunner('')
-
-
 
 	try:
 		main_instance = main.create_instance(args.key_name)
