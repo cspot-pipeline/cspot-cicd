@@ -16,9 +16,8 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - run: pip install -r .github/requirements.txt
-      - run: ls .github
       - name: Make runner
-        run: .github/setup-euca.py --key-name codici2
+        run: .github/setup_euca.py --key-name codici2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
