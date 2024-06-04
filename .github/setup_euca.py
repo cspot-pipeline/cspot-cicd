@@ -259,7 +259,7 @@ class Main:
 			try:
 				remote.connect(hostname=instance.PublicIpAddress,
 							   username='cloud-user',
-							   key_filename='/home/ryan/projects/RACELab/CI-CD/codici2.pem',
+							   key_filename=keypath,
 							   timeout=20)
 			except:
 				print('Connection failed, trying again...')
