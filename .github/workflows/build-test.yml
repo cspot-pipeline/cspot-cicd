@@ -11,4 +11,4 @@ jobs:
         run: ./build-install.sh
       - name: Clean Up
         if: always()
-        run: sudo shutdown now # want this to happen ASAP so no other workflows come try to run in the meantime
+        run: sudo shutdown +1
