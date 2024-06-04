@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.12
 import argparse
 import json
 import os
@@ -23,7 +23,6 @@ class Env:
 		'AMI_IMAGE': 'ami-f5412b12d9ad4af01',
 		'GITHUB_OUTPUT': 'gh_out.txt',
 		'REPO_URL': 'https://github.com/cspot-pipeline/cspot-cicd',
-		# TODO: DELETE THIS AND CHANGE ON GITHUB BEFORE PUSH!!! (here for testing on local machine)
 		'GH_ACCESS_TOKEN': '',
 		'CICD_SSH_KEY': '',
 		'EC2_CREATE_TIMEOUT': 300  # time to wait in seconds before aborting create operation
@@ -62,17 +61,20 @@ class EC2Instance(dict):
 		"""
 		Terminates the instance
 		"""
+		if not self.should_terminate:
+			return
 		self.EC2.terminate_instances(InstanceIds=[self.InstanceId])
 		print(f'Terminated instance with id {self.InstanceId}')
+		self.should_terminate = False
 
 	def __del__(self):
-		if self.should_terminate:
-			self.terminate()
+		self.terminate()
 
 
 def _check_response(resp: requests.Response):
-	if not resp.ok:  # TODO: handle this (and similar cases) better lol
-		print(f"error in POST request: status {resp.status_code}", file=sys.stderr)
+	if not resp.ok:
+		print(f"error in HTTP request: status {resp.status_code}", file=sys.stderr)
+		cleanup()
 		exit(1)
 
 
@@ -135,11 +137,12 @@ class GHActionsRunner(dict):
 		time.sleep(1)
 		host.exec_command('tar xzf actions-runner.tar.gz')
 		time.sleep(5)
+		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
 		host.exec_command('./config.sh --unattended --no-default-labels '
-							f'--url {url} --token {self.registration_token} '
-							f'--name {self.name} '
-							f'--labels {",".join(self.labels)} '
-						  	' && bash -c "nohup ./run.sh &"')
+						  f'--url {url} --token {self.registration_token} '
+						  f'--name {self.name} '
+						  f'--labels {",".join(self.labels)} '
+						  ' && bash -c "nohup ./run.sh &"')
 		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
 		time.sleep(30)  # <-- increase to 40-60 if this is too short
 
@@ -177,15 +180,16 @@ class GHActionsRunner(dict):
 		"""
 		Removes the runner associated with this object from the repo
 		"""
+		if not self.should_deregister:
+			return
 		response = requests.delete(GHActionsRunner.API_URL + f'/{self.id}',
 								   auth=self.auth, headers=self.headers)
-		_check_response(response)
+		# _check_response(response)  # this will trigger an infinite loop if the request fails
 		print(f'Removed runner "{self.name}" (id {self.id}).')
 		self.should_deregister = False
 
 	def __del__(self):
-		if self.should_deregister:
-			self.deregister()
+		self.deregister()
 
 
 class Main:
@@ -219,7 +223,8 @@ class Main:
 			print("Error: Timed out waiting for instance to come online", file=sys.stderr)
 			ec2_instance.terminate()
 
-		ec2_instance.set_shutdown_behavior('TERMINATE')
+		# doesn't work
+		ec2_instance.set_shutdown_behavior('Terminate')
 
 		with open(self.ENV.GITHUB_OUTPUT, 'a+') as gh_output:
 			gh_output.write(f'CURR_ID={instance_id}\n')
@@ -280,6 +285,13 @@ class Main:
 		self.close_client()  # doesn't appear to have an issue being called twice
 
 
+def cleanup():
+	print("Cleaning up")
+	main_instance.terminate()  # needs to be called before the boto client is closed!
+	main_runner.deregister()
+	main.close_client()
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', '--key-name', type=str, help='Name of PEM key as used by AWS')
@@ -291,26 +303,22 @@ if __name__ == "__main__":
 
 
 
-	# run = GHActionsRunner(main.ENV.GH_ACCESS_TOKEN, name='tester')
-	# while True:
-	# 	pass
-
 	try:
 		main_instance = main.create_instance(args.key_name)
 	except botocore.exceptions.ClientError as err:
 		print('Error: failed to create Eucalyptus instance', file=sys.stderr)
 		# TODO: print exception's error message
+		cleanup()
 		exit(1)  # abort if instance creation failed
 
-	main_runner = main.start_runner(main_instance)
+	try:
+		main_runner = main.start_runner(main_instance)
+	except:
+		cleanup()
+		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
 	while main_instance.get_state() == 'running':
 		time.sleep(30)
 
-	print("Cleaning up")
-	main_instance.terminate()  # needs to be called before the boto client is closed!
-	main_runner.deregister()
-	main.close_client()
-# main.delete_runner()
-# main_instance.terminate()  # should happen automatically on shutdown
+	cleanup()
