@@ -19,9 +19,8 @@ class Env:
 	Simple wrapper around variables that come from shell environment
 	"""
 	defaults = {
-		'REGION': 'eucalyptus',
+		'AWS_DEFAULT_REGION': 'eucalyptus',
 		'AMI_IMAGE': 'ami-f5412b12d9ad4af01',
-		'GITHUB_OUTPUT': 'gh_out.txt',
 		'REPO_URL': 'https://github.com/cspot-pipeline/cspot-cicd',
 		'GH_ACCESS_TOKEN': '',
 		'CICD_SSH_KEY': '',
@@ -158,6 +157,7 @@ class GHActionsRunner(dict):
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
 			print('Configuration failed due to an unknown error', file=sys.stderr)
+			cleanup()
 			exit(1)
 
 		self.should_deregister = True
@@ -203,7 +203,7 @@ class Main:
 		"""
 		Creates an instance on Eucalyptus
 		:param keyname: name of SSH key to use
-		:return: instance info as JSON object
+		:return: instance wrapper object
 		"""
 		print('Creating instance...')
 		ec2_instance = EC2Instance(self.EC2, KeyName=keyname, ImageId=self.ENV.AMI_IMAGE, InstanceType='t2.xlarge')
@@ -220,16 +220,12 @@ class Main:
 				break
 			print('No.')
 			time.sleep(5)
-		else:  # code here will only be executed if exited the loop *without* breaking
+		else:  # code here will only be executed if we exited the loop *without* breaking
 			print("Error: Timed out waiting for instance to come online", file=sys.stderr)
 			ec2_instance.terminate()
 
 		# doesn't work
 		ec2_instance.set_shutdown_behavior('Terminate')
-
-		with open(self.ENV.GITHUB_OUTPUT, 'a+') as gh_output:
-			gh_output.write(f'CURR_ID={instance_id}\n')
-			gh_output.write(f'PUBLIC_IP={public_ip}\n')
 
 		return ec2_instance
 
@@ -238,7 +234,7 @@ class Main:
 		Configures and starts a self-hosted runner on the specified EC2 instance
 		:param instance: EC2 instance to host the runner
 		:param runner_name: (optional) name to assign to the runner on GitHub
-		:return: Token to be used in the runner configuration
+		:return: runner object
 		"""
 
 		if runner_name == '':
