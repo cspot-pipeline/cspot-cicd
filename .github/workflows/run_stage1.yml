@@ -74,7 +74,6 @@ jobs:
             tar xzf ./actions-runner-linux-x64-2.316.1.tar.gz
             ./config.sh --url https://github.com/cspot-pipeline/cspot-cicd --token $TOKEN
             ./run.sh
-            exit
 
   cspot-build-test:
     needs: [configure-remote-runner]
