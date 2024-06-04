@@ -2,13 +2,16 @@
 import argparse
 import json
 import os
-import requests
 import sys
 import time
+from stat import S_IRUSR
+from uuid import uuid4
 
 import boto3
 import botocore.config
 import botocore.exceptions
+import paramiko
+import requests
 
 
 class Env:
@@ -17,8 +20,11 @@ class Env:
 	"""
 	defaults = {
 		'REGION': 'eucalyptus',
-		'AMI_IMAGE': 'ami-97b07ba03fe3f6a93',
+		'AMI_IMAGE': 'ami-f5412b12d9ad4af01',
 		'GITHUB_OUTPUT': 'gh_out.txt',
+		'REPO_URL': 'https://github.com/cspot-pipeline/cspot-cicd',
+		# TODO: DELETE THIS AND CHANGE ON GITHUB BEFORE PUSH!!! (here for testing on local machine)
+		'GH_ACCESS_TOKEN': '',
 		'CICD_SSH_KEY': '',
 		'EC2_CREATE_TIMEOUT': 300  # time to wait in seconds before aborting create operation
 	}
@@ -37,8 +43,10 @@ class EC2Instance(dict):
 
 	def __init__(self, ec2_client, **run_args):
 		super().__init__()
+		self.should_terminate = False
 		self.EC2 = ec2_client
 		instance = self.EC2.run_instances(**run_args, MaxCount=1, MinCount=1)['Instances'][0]
+		self.should_terminate = True
 		self.__dict__.update(instance)
 		self.InstanceId = instance['InstanceId']  # redundant, but make this one explicit
 
@@ -46,20 +54,138 @@ class EC2Instance(dict):
 		return self.EC2.describe_instances(InstanceIds=[self.InstanceId])['Reservations'][0]['Instances'][0]['State'][
 			'Name']
 
+	def set_shutdown_behavior(self, behavior: str):
+		self.EC2.modify_instance_attribute(InstanceId=self.InstanceId,
+										   InstanceInitiatedShutdownBehavior={'Value': behavior})
+
 	def terminate(self):
 		"""
 		Terminates the instance
 		"""
 		self.EC2.terminate_instances(InstanceIds=[self.InstanceId])
+		print(f'Terminated instance with id {self.InstanceId}')
+
+	def __del__(self):
+		if self.should_terminate:
+			self.terminate()
+
+
+def _check_response(resp: requests.Response):
+	if not resp.ok:  # TODO: handle this (and similar cases) better lol
+		print(f"error in POST request: status {resp.status_code}", file=sys.stderr)
+		exit(1)
 
 
 class GHActionsRunner(dict):
 	"""
 	Wrapper class to represent a self-hosted runner on GitHub actions
 	"""
+	API_URL = 'https://api.github.com/repos/cspot-pipeline/cspot-cicd/actions/runners'
 
-	def __init__(self):
+	def __init__(self, pat_token: str, name: str = '', runner_group: int = 1):
+		"""
+		:param pat_token: GitHub personal access token value
+		:param name: (optional) name for the runner to use
+		:param runner_group: (optional) group number to place the new runner in
+		"""
 		super().__init__()
+
+		self.should_deregister = False
+		self.headers = {
+			'X-GitHub-Api-Version': '2022-11-28',
+			'accept': 'application/vnd.github+json',
+		}
+		self.auth = (None, pat_token)
+
+		# grab a registration token that will allow us to configure new runners once added
+		response = requests.post(GHActionsRunner.API_URL + '/registration-token',
+								 auth=self.auth, headers=self.headers)
+		_check_response(response)
+		token_json = json.loads(response.text)
+		self.registration_token = token_json['token']
+		print(f'Got GitHub actions registration token with expiration of {token_json["expires_at"]}')
+
+		# get the number of existing runners and (if applicable) check whether the requested name is available
+		response = requests.get(GHActionsRunner.API_URL, auth=self.auth, headers=self.headers)
+		_check_response(response)
+
+		registered_runners = json.loads(response.text)
+		actual_name = f'cspot-runner-{uuid4()}'
+		if name != '':
+			for r in registered_runners['runners']:
+				if name == r['name']:
+					print(f'A runner with name "{name}" already exists. Using "{actual_name}" instead.',
+						  file=sys.stderr)
+					break
+			else:  # note this is paired with the for loop, NOT the if block (not a typo)
+				actual_name = name
+
+		self.name = actual_name
+		self.runner_group_id = runner_group
+		self.labels = ['self-hosted', 'x86_64', 'Linux']
+
+	def configure(self, host: paramiko.SSHClient, url: str):
+		"""
+		runs the configuration on the remote host
+		:param host: the host (should already be connected)
+		:param url: URL of the repo on GitHub
+		"""
+		tarball_path = 'actions-runner.tar.gz'
+		host.exec_command(f'curl -o {tarball_path} -L {self.get_download_url()}')
+		time.sleep(1)
+		host.exec_command('tar xzf actions-runner.tar.gz')
+		time.sleep(5)
+		host.exec_command('./config.sh --unattended --no-default-labels '
+							f'--url {url} --token {self.registration_token} '
+							f'--name {self.name} '
+							f'--labels {",".join(self.labels)} '
+						  	' && bash -c "nohup ./run.sh &"')
+		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
+		time.sleep(30)  # <-- increase to 40-60 if this is too short
+
+		# add info about ourself to the `self` object
+		response = requests.get(GHActionsRunner.API_URL,
+								headers=self.headers, auth=self.auth)
+		_check_response(response)
+		runners = json.loads(response.text)['runners']
+		me = {}
+		for r in runners:
+			if r['name'] == self.name:
+				me = r
+				break
+		else:  # configuration failed--we aren't present in the repo's runners list
+			print('Configuration failed due to an unknown error', file=sys.stderr)
+			exit(1)
+
+		self.update(me)
+		self.__dict__.update(me)
+
+	def get_download_url(self) -> str:
+		"""
+		Get the download URL for the self-hosted runner application
+		"""
+		response = requests.get(GHActionsRunner.API_URL + '/downloads',
+								auth=self.auth, headers=self.headers)
+		_check_response(response)
+		results = json.loads(response.text)
+		for r in results:
+			if r['os'] == 'linux' and r['architecture'] == 'x64':
+				return r['download_url']
+		print('Unable to find download URL for (linux, x64) runner', file=sys.stderr)
+
+	def deregister(self):
+		"""
+		Removes the runner associated with this object from the repo
+		"""
+		response = requests.delete(GHActionsRunner.API_URL + f'/{self.id}',
+								   auth=self.auth, headers=self.headers)
+		_check_response(response)
+		print(f'Removed runner "{self.name}" (id {self.id}).')
+		self.should_deregister = False
+
+	def __del__(self):
+		if self.should_deregister:
+			self.deregister()
 
 
 class Main:
@@ -93,22 +219,65 @@ class Main:
 			print("Error: Timed out waiting for instance to come online", file=sys.stderr)
 			ec2_instance.terminate()
 
+		ec2_instance.set_shutdown_behavior('TERMINATE')
+
 		with open(self.ENV.GITHUB_OUTPUT, 'a+') as gh_output:
 			gh_output.write(f'CURR_ID={instance_id}\n')
 			gh_output.write(f'PUBLIC_IP={public_ip}\n')
 
 		return ec2_instance
 
-	def add_runner(self, inst_id: str, gh_acc_token: str) -> str:
+	def start_runner(self, instance: EC2Instance, runner_name: str = '') -> GHActionsRunner:
 		"""
-		Adds an AWS instance to the repo's list of self-hosted runners
-		:param inst_id: AWS instance ID
-		:param gh_acc_token: GitHub personal access token to use for HTTPS requests
+		Configures and starts a self-hosted runner on the specified EC2 instance
+		:param instance: EC2 instance to host the runner
+		:param runner_name: (optional) name to assign to the runner on GitHub
 		:return: Token to be used in the runner configuration
 		"""
 
+		if runner_name == '':
+			runner_name = f'cspot-runner-{instance.InstanceId}'
+		runner = GHActionsRunner(self.ENV.GH_ACCESS_TOKEN, name=runner_name)
+
+		print('Preparing to connect to runner...')
+
+		# set up SSH key
+		keypath = f'/tmp/keyfile-{uuid4()}'
+		with open(keypath, 'w+') as privkey:
+			privkey.write(self.ENV.CICD_SSH_KEY)
+		os.chmod(keypath, S_IRUSR)
+
+		remote = paramiko.SSHClient()
+		remote.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+		time.sleep(5)
+		while True:
+			try:
+				remote.connect(hostname=instance.PublicIpAddress,
+							   username='cloud-user',
+							   key_filename='/home/ryan/projects/RACELab/CI-CD/codici2.pem',
+							   timeout=20)
+			except:
+				print('Connection failed, trying again...')
+				time.sleep(5)
+				continue
+			break
+
+		print('Successfully connected to runner over SSH')
+		print('Configuring runner')
+
+		runner.configure(remote, self.ENV.REPO_URL)
+
+		remote.close()
+		os.remove(keypath)
+		print('Configuration complete. Runner is now listening for jobs.')
+
+		return runner
+
 	def close_client(self):
 		self.EC2.close()
+
+	def __del__(self):
+		self.close_client()  # doesn't appear to have an issue being called twice
 
 
 if __name__ == "__main__":
@@ -118,19 +287,30 @@ if __name__ == "__main__":
 
 	main = Main(os.environ)
 
+	main_runner = GHActionsRunner('')
+
+
+
+	# run = GHActionsRunner(main.ENV.GH_ACCESS_TOKEN, name='tester')
+	# while True:
+	# 	pass
+
 	try:
 		main_instance = main.create_instance(args.key_name)
 	except botocore.exceptions.ClientError as err:
 		print('Error: failed to create Eucalyptus instance', file=sys.stderr)
 		# TODO: print exception's error message
-		sys.exit(1)  # abort if instance creation failed
+		exit(1)  # abort if instance creation failed
+
+	main_runner = main.start_runner(main_instance)
 
 	# wait for CI pipeline to complete and shut down the system
-	while main_instance.get_state() != 'stopped':
-		time.sleep(5)
-
-	# main.delete_runner()
+	while main_instance.get_state() == 'running':
+		time.sleep(30)
 
 	print("Cleaning up")
-	main_instance.terminate()
+	main_instance.terminate()  # needs to be called before the boto client is closed!
+	main_runner.deregister()
 	main.close_client()
+# main.delete_runner()
+# main_instance.terminate()  # should happen automatically on shutdown
