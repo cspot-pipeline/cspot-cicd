@@ -106,7 +106,6 @@ class EC2Instance(dict):
 def _check_response(resp: requests.Response):
 	if not resp.ok:
 		print_error(f"error in HTTP request: status {resp.status_code}")
-		cleanup()
 		exit(1)
 
 
@@ -126,7 +125,6 @@ class GHActionsRunner(dict):
 		"""
 		super().__init__()
 
-		self.should_deregister = False
 		self.headers = {
 			'X-GitHub-Api-Version': '2022-11-28',
 			'accept': 'application/vnd.github+json',
@@ -177,8 +175,6 @@ class GHActionsRunner(dict):
 						  f'--labels {",".join(self.labels)} '
 						  ' && bash -c "nohup ./run.sh &"')
 
-		# also, this is here in case we get killed early, even if the configuration wasn't successful
-		self.should_deregister = True
 		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
 		time.sleep(90)  # <-- increase to 40-60 if this is too short
 
@@ -194,7 +190,6 @@ class GHActionsRunner(dict):
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
 			print_error('Configuration failed due to an unknown error')
-			cleanup()
 			exit(1)
 
 		self.update(me)
@@ -217,16 +212,12 @@ class GHActionsRunner(dict):
 		"""
 		Removes the runner associated with this object from the repo
 		"""
-		if not self.should_deregister:
-			return
 		response = requests.delete(GHActionsRunner.API_URL + f'/{self.id}',
 								   auth=self.auth, headers=self.headers)
 		# _check_response(response)  # this will trigger an infinite loop if the request fails
-		print(f'Removed runner "{self.name}" (id {self.id}).')
-		self.should_deregister = False
-
-	def __del__(self):
-		self.deregister()
+		if response.ok:
+			print(f'Removed runner "{self.name}" (id {self.id}).')
+		# else, assume the runner was already deleted/not present on GitHub
 
 
 class Main:
@@ -327,9 +318,6 @@ class Main:
 	def close_client(self):
 		self.EC2.close()
 
-	def __del__(self):
-		self.close_client()  # doesn't appear to have an issue being called twice
-
 
 class Dummy:
 	"""
@@ -373,7 +361,7 @@ if __name__ == "__main__":
 						help=f'Omit the default labels ({main.ENV.DEFAULT_RUNNER_LABELS}) from the runner')
 	args = parser.parse_args()
 
-	# TODO: check duplicates (maybe? not sure how github will handle them)
+	# Note: GitHub ignores duplicate labels and only adds 1 to the instance
 	runner_labels = ([] if args.no_default_labels else main.ENV.DEFAULT_RUNNER_LABELS.split(',')) + args.label
 	if len(runner_labels) == 0:
 		print_error("The `--label' argument is required if the `--no-default-labels' option is used")
@@ -393,14 +381,12 @@ if __name__ == "__main__":
 	except botocore.exceptions.ClientError as err:
 		print_error('failed to create Eucalyptus instance')
 		# TODO: print exception's error message
-		cleanup()
 		exit(1)  # abort if instance creation failed
 
 	try:
 		main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
 	except:
 		print_error('failed to start self-hosted runner')
-		cleanup()  # this will error otherwise since main_runner is not defined
 		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
