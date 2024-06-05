@@ -19,7 +19,7 @@ jobs:
           cache: 'pip'
       - run: pip install -r .github/requirements.txt
       - name: Make runner
-        run: .github/setup_euca.py codici2 --label single-euca-node
+        run: .github/setup_euca.py codici2 --label single-euca-node --stop-on-error
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -6,10 +6,10 @@ import os
 import sys
 import time
 from stat import S_IRUSR
+from typing import Callable
 from uuid import uuid4
 
 import boto3
-import botocore.config
 import botocore.exceptions
 import paramiko
 import requests
@@ -177,11 +177,14 @@ class GHActionsRunner(dict):
 			exit(1)
 
 		print('Running configure script...')
+		conf_cmd = './config.sh --unattended --no-default-labels --ephemeral ' \
+				   f'--url {url} --token {self.registration_token} ' \
+				   f'--name {self.name} ' \
+				   f'--labels {",".join(self.labels)}'
+		print(conf_cmd)
+
 		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
-		_, stdo, stde = host.exec_command('./config.sh --unattended --no-default-labels --ephemeral '
-						  f'--url {url} --token {self.registration_token} '
-						  f'--name {self.name} '
-						  f'--labels {",".join(self.labels)}')
+		_, stdo, stde = host.exec_command(conf_cmd)
 		if stdo.channel.recv_exit_status() != 0:
 			print_error('runner configuration failed: configuration script exited abnormally:\n'
 						+ stde.read().decode('UTF-8'))
@@ -209,7 +212,7 @@ class GHActionsRunner(dict):
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
 			print_error('An unknown error occurred on the runner')
-			# exit(1)
+		# exit(1)
 
 		self.update(me)
 		self.__dict__.update(me)
@@ -252,8 +255,7 @@ class GHActionsRunner(dict):
 class Main:
 	def __init__(self):
 		self.ENV = Env()
-		conf = botocore.config.Config(region_name='eucalyptus')
-		self.EC2 = boto3.client('ec2', config=conf)
+		self.EC2 = boto3.client('ec2')
 
 	def create_instance(self, keyname: str) -> EC2Instance:
 		"""
@@ -361,7 +363,16 @@ class Dummy:
 		return
 
 
-def cleanup():
+def cleanup(stop_on_error: Callable[[], bool]):
+	if stop_on_error():
+		print("Script halted before cleanup.")
+		# (for debugging on GitHub actions)
+		from signal import pause
+		try:
+			pause()
+		except KeyboardInterrupt:  # ignore but continue
+			pass
+
 	global main
 	global main_instance
 	global main_runner
@@ -391,6 +402,9 @@ if __name__ == "__main__":
 							 "Required if `--no-default-labels' is present")
 	parser.add_argument('--no-default-labels', action='store_true',
 						help=f'Omit the default labels ({main.ENV.DEFAULT_RUNNER_LABELS}) from the runner')
+	parser.add_argument('--stop-on-error', action='store_true',
+						help='(For debugging) Suspend the script immediately before performing'
+							 ' cleanup when an error is encountered')
 	args = parser.parse_args()
 
 	# Note: GitHub ignores duplicate labels and only adds 1 to the instance
@@ -406,7 +420,8 @@ if __name__ == "__main__":
 	# safely handle early cleanup()
 	main_runner = Dummy()
 	main_instance = Dummy()
-	atexit.register(cleanup)
+	# need to capture the value of stop_on_error when cleanup is called, NOT when we define this callback
+	atexit.register(cleanup, lambda: args.stop_on_error)
 
 	try:
 		main_instance = main.create_instance(args.key_name)
@@ -415,11 +430,11 @@ if __name__ == "__main__":
 		# TODO: print exception's error message
 		exit(1)  # abort if instance creation failed
 
-	try:
-		main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
-	except:
-		print_error('failed to start self-hosted runner')
-		exit(1)
+	# try:
+	main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
+	# except:
+	# 	print_error('failed to start self-hosted runner')
+	# 	exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
 	# while main_instance.get_state() != 'stopped':
@@ -429,4 +444,5 @@ if __name__ == "__main__":
 		time.sleep(10)
 
 	print('Done!')
+	args.stop_on_error = False
 	exit(0)
