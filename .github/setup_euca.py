@@ -163,20 +163,39 @@ class GHActionsRunner(dict):
 		:param host: the host (should already be connected)
 		:param url: URL of the repo on GitHub
 		"""
+		print('Downloading...')
 		tarball = 'actions-runner.tar.gz'
-		host.exec_command(f'curl -o {tarball} -L {self.get_download_url()}')
-		time.sleep(1)
-		host.exec_command(f'tar xzf {tarball}')
-		time.sleep(5)
+		_, stdo, _ = host.exec_command(f'curl -o {tarball} -L {self.get_download_url()}')
+		if stdo.channel.recv_exit_status() != 0:
+			print_error('runner configuration failed: unable to download runner application')
+			exit(1)
+
+		print('Extracting...')
+		_, stdo, _ = host.exec_command(f'tar xzf {tarball}')
+		if stdo.channel.recv_exit_status() != 0:
+			print_error('runner configuration failed: unable to extract application tarball')
+			exit(1)
+
+		print('Running configure script...')
 		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
-		host.exec_command('./config.sh --unattended --no-default-labels --ephemeral '
+		_, stdo, stde = host.exec_command('./config.sh --unattended --no-default-labels --ephemeral '
 						  f'--url {url} --token {self.registration_token} '
 						  f'--name {self.name} '
-						  f'--labels {",".join(self.labels)} '
-						  ' && bash -c "nohup ./run.sh &"')
+						  f'--labels {",".join(self.labels)}')
+		if stdo.channel.recv_exit_status() != 0:
+			print_error('runner configuration failed: configuration script exited abnormally:\n'
+						+ stde.read().decode('UTF-8'))
+			exit(1)
 
-		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
-		time.sleep(90)  # <-- increase to 40-60 if this is too short
+		print('Launching runner process...')
+		_, stdo, _ = host.exec_command('bash -c "nohup ./run.sh &"')
+		if stdo.channel.recv_exit_status() != 0:
+			print_error('runner configuration failed: configuration script exited abnormally:\n'
+						+ stde.read().decode('UTF-8'))
+			exit(1)
+
+		# wait for runner to show up on GitHub
+		time.sleep(20)
 
 		# add info about ourself to the `self` object
 		response = requests.get(GHActionsRunner.API_URL,
@@ -189,8 +208,8 @@ class GHActionsRunner(dict):
 				me = r
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
-			print_error('Configuration failed due to an unknown error')
-			exit(1)
+			print_error('An unknown error occurred on the runner')
+			# exit(1)
 
 		self.update(me)
 		self.__dict__.update(me)
@@ -213,7 +232,9 @@ class GHActionsRunner(dict):
 		[For ephemeral runners] checks whether the runner has deregistered itself after completing
 		its job
 		"""
-		response = requests.get(GHActionsRunner.API_URL + f'/{self.id}')
+
+		response = requests.get(GHActionsRunner.API_URL + f'/{self.id}',
+								auth=self.auth, headers=self.headers)
 		return not response.ok
 
 	def deregister(self):
@@ -314,9 +335,9 @@ class Main:
 		print('Configuring runner')
 
 		runner.configure(remote, self.ENV.REPO_URL)
+		print('Configuration confirmed successful. Runner is now listening for jobs.')
 
 		remote.close()
-		print('Configuration complete. Runner is now listening for jobs.')
 		# hack. want to remove keyfile from the runner but not dev machine; easiest way to determine is this
 		if ssh_key == '':
 			os.remove(keypath)
@@ -346,7 +367,10 @@ def cleanup():
 	global main_runner
 	print("Cleaning up")
 	main_instance.terminate()  # needs to be called before the boto client is closed!
-	main_runner.deregister()
+	try:
+		main_runner.deregister()
+	except KeyboardInterrupt:  # not sure why this is the error that gets thrown if the HTTP request fails?
+		pass
 	main.close_client()
 
 
@@ -401,6 +425,8 @@ if __name__ == "__main__":
 	# while main_instance.get_state() != 'stopped':
 	# 	time.sleep(30)
 	while not main_runner.is_autoremoved():
+		print('Waiting for runner job to complete...')
 		time.sleep(10)
 
+	print('Done!')
 	exit(0)
