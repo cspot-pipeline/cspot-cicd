@@ -169,7 +169,7 @@ class GHActionsRunner(dict):
 		host.exec_command(f'tar xzf {tarball}')
 		time.sleep(5)
 		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
-		host.exec_command('./config.sh --unattended --no-default-labels '
+		host.exec_command('./config.sh --unattended --no-default-labels --ephemeral '
 						  f'--url {url} --token {self.registration_token} '
 						  f'--name {self.name} '
 						  f'--labels {",".join(self.labels)} '
@@ -207,6 +207,14 @@ class GHActionsRunner(dict):
 			if r['os'] == 'linux' and r['architecture'] == 'x64':
 				return r['download_url']
 		print_error('Unable to find download URL for (linux, x64) runner')
+
+	def is_autoremoved(self) -> bool:
+		"""
+		[For ephemeral runners] checks whether the runner has deregistered itself after completing
+		its job
+		"""
+		response = requests.get(GHActionsRunner.API_URL + f'/{self.id}')
+		return not response.ok
 
 	def deregister(self):
 		"""
@@ -390,7 +398,9 @@ if __name__ == "__main__":
 		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
-	while main_instance.get_state() != 'stopped':
-		time.sleep(30)
+	# while main_instance.get_state() != 'stopped':
+	# 	time.sleep(30)
+	while not main_runner.is_autoremoved():
+		time.sleep(10)
 
 	exit(0)
