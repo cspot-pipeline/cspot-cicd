@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.12
 import argparse
+import atexit
 import json
 import os
 import sys
@@ -16,7 +17,12 @@ import requests
 
 class Env:
 	"""
-	Simple wrapper around variables that come from shell environment
+	Simple wrapper around variables that come from OS environment. Order of precedence (highest to lowest):
+		- local .env file
+		- OS environment
+		- default values (configured below)
+
+	Default values are NOT propagated back to the outer environment (although ones loaded from an .env file *are*).
 	"""
 	defaults = {
 		'AWS_DEFAULT_REGION': 'eucalyptus',
@@ -24,14 +30,41 @@ class Env:
 		'REPO_URL': 'https://github.com/cspot-pipeline/cspot-cicd',
 		'GH_ACCESS_TOKEN': '',
 		'CICD_SSH_KEY': '',
-		'EC2_CREATE_TIMEOUT': 300  # time to wait in seconds before aborting create operation
+		'EC2_CREATE_TIMEOUT': '300',  # time to wait in seconds before aborting create operation
+		'DEFAULT_RUNNER_LABELS': 'self-hosted,Linux,x86_64',
 	}
 
-	def __init__(self, os_env):
+	def __init__(self):
+		os_env = os.environ
+		# overwrite os environment values with ones from .env file, if present
+		Env.load_dotenv(os_env)
 		props = Env.defaults
 		for p in props:
 			props[p] = os_env.get(p, props[p])
 		self.__dict__.update(props)
+
+	# print(self.__dict__)
+
+	def update(self, new: dict[str, str]):
+		self.__dict__.update(new)
+
+	@classmethod
+	def load_dotenv(cls, os_env: dict[str, str], filepath: str = '.env'):
+		print(f'Checking for environment file at {filepath}')
+		try:
+			envfile = open(filepath, 'r')
+		except FileNotFoundError:
+			print('No env file found, using OS environment')
+			return
+
+		for line in envfile:
+			line = line.strip()
+			if line.startswith('#') or '=' not in line:
+				continue
+			name, val = (i.strip() for i in line.split('=', maxsplit=1))
+			os_env[name] = val
+		print(f'Loaded environment configuration from file {filepath}')
+		envfile.close()
 
 
 class EC2Instance(dict):
@@ -72,7 +105,7 @@ class EC2Instance(dict):
 
 def _check_response(resp: requests.Response):
 	if not resp.ok:
-		print(f"error in HTTP request: status {resp.status_code}", file=sys.stderr)
+		print_error(f"error in HTTP request: status {resp.status_code}")
 		cleanup()
 		exit(1)
 
@@ -83,9 +116,11 @@ class GHActionsRunner(dict):
 	"""
 	API_URL = 'https://api.github.com/repos/cspot-pipeline/cspot-cicd/actions/runners'
 
-	def __init__(self, pat_token: str, name: str = '', runner_group: int = 1):
+	def __init__(self, pat_token: str, labels: list[str],
+				 name: str = '', runner_group: int = 1):
 		"""
 		:param pat_token: GitHub personal access token value
+		:param labels: list of labels to be attached to the runner.
 		:param name: (optional) name for the runner to use
 		:param runner_group: (optional) group number to place the new runner in
 		"""
@@ -115,15 +150,14 @@ class GHActionsRunner(dict):
 		if name != '':
 			for r in registered_runners['runners']:
 				if name == r['name']:
-					print(f'A runner with name "{name}" already exists. Using "{actual_name}" instead.',
-						  file=sys.stderr)
+					print_error(f'A runner with name "{name}" already exists. Using "{actual_name}" instead.')
 					break
 			else:  # note this is paired with the for loop, NOT the if block (not a typo)
 				actual_name = name
 
 		self.name = actual_name
 		self.runner_group_id = runner_group
-		self.labels = ['self-hosted', 'x86_64', 'Linux']
+		self.labels = labels
 
 	def configure(self, host: paramiko.SSHClient, url: str):
 		"""
@@ -142,6 +176,9 @@ class GHActionsRunner(dict):
 						  f'--name {self.name} '
 						  f'--labels {",".join(self.labels)} '
 						  ' && bash -c "nohup ./run.sh &"')
+
+		# also, this is here in case we get killed early, even if the configuration wasn't successful
+		self.should_deregister = True
 		# ^^last line is here^^ so we don't have to wrestle with sleep() timings between ./configure and ./run
 		time.sleep(90)  # <-- increase to 40-60 if this is too short
 
@@ -156,11 +193,10 @@ class GHActionsRunner(dict):
 				me = r
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
-			print('Configuration failed due to an unknown error', file=sys.stderr)
+			print_error('Configuration failed due to an unknown error')
 			cleanup()
 			exit(1)
 
-		self.should_deregister = True
 		self.update(me)
 		self.__dict__.update(me)
 
@@ -175,7 +211,7 @@ class GHActionsRunner(dict):
 		for r in results:
 			if r['os'] == 'linux' and r['architecture'] == 'x64':
 				return r['download_url']
-		print('Unable to find download URL for (linux, x64) runner', file=sys.stderr)
+		print_error('Unable to find download URL for (linux, x64) runner')
 
 	def deregister(self):
 		"""
@@ -194,8 +230,8 @@ class GHActionsRunner(dict):
 
 
 class Main:
-	def __init__(self, os_env):
-		self.ENV = Env(os_env)
+	def __init__(self):
+		self.ENV = Env()
 		conf = botocore.config.Config(region_name='eucalyptus')
 		self.EC2 = boto3.client('ec2', config=conf)
 
@@ -221,7 +257,7 @@ class Main:
 			print('No.')
 			time.sleep(5)
 		else:  # code here will only be executed if we exited the loop *without* breaking
-			print("Error: Timed out waiting for instance to come online", file=sys.stderr)
+			print_error("Timed out waiting for instance to come online")
 			ec2_instance.terminate()
 
 		# doesn't work
@@ -229,29 +265,40 @@ class Main:
 
 		return ec2_instance
 
-	def start_runner(self, instance: EC2Instance, runner_name: str = '') -> GHActionsRunner:
-		"""
-		Configures and starts a self-hosted runner on the specified EC2 instance
-		:param instance: EC2 instance to host the runner
-		:param runner_name: (optional) name to assign to the runner on GitHub
-		:return: runner object
-		"""
+	def get_ssh_key(self, keyfile: str = '') -> str:
+		if keyfile != '':
+			return keyfile
 
-		if runner_name == '':
-			runner_name = f'cspot-runner-{instance.InstanceId}'
-		runner = GHActionsRunner(self.ENV.GH_ACCESS_TOKEN, name=runner_name)
-
-		print('Preparing to connect to runner...')
-
-		# set up SSH key
 		keypath = f'/tmp/keyfile-{uuid4()}'
 		with open(keypath, 'w+') as privkey:
 			privkey.write(self.ENV.CICD_SSH_KEY)
 		os.chmod(keypath, S_IRUSR)
 
+		return keypath
+
+	def start_runner(self, instance: EC2Instance, ssh_key: str = '',
+					 runner_name: str = '', **kwargs) -> GHActionsRunner:
+		"""
+		Configures and starts a self-hosted runner on the specified EC2 instance
+		:param instance: EC2 instance to host the runner
+		:param ssh_key: (optional) path to existing SSH private key file to use (instead of value from the environment)
+		:param runner_name: (optional) name to assign to the runner on GitHub
+		:param kwargs: (optional) list of keyword arguments to be forwarded to the GHActionsRunner constructor
+		:return: runner object
+		"""
+
+		if runner_name == '':
+			runner_name = f'cspot-runner-{instance.InstanceId}'
+		runner = GHActionsRunner(self.ENV.GH_ACCESS_TOKEN, name=runner_name, **kwargs)
+
+		print('Preparing to connect to runner...')
+
+		# set up SSH key
+		keypath = self.get_ssh_key(ssh_key)
+
 		remote = paramiko.SSHClient()
 		remote.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-		time.sleep(5)
+		time.sleep(10)
 		while True:
 			try:
 				remote.connect(hostname=instance.PublicIpAddress,
@@ -270,8 +317,10 @@ class Main:
 		runner.configure(remote, self.ENV.REPO_URL)
 
 		remote.close()
-		os.remove(keypath)
 		print('Configuration complete. Runner is now listening for jobs.')
+		# hack. want to remove keyfile from the runner but not dev machine; easiest way to determine is this
+		if ssh_key == '':
+			os.remove(keypath)
 
 		return runner
 
@@ -287,6 +336,7 @@ class Dummy:
 	Dummy class to act as placeholder in case cleanup() is called before runner/instance
 	gets created
 	"""
+
 	def deregister(self):
 		return
 
@@ -304,29 +354,52 @@ def cleanup():
 	main.close_client()
 
 
+def print_error(*args):
+	print(f'{os.path.basename(__file__)}: error:', *args, file=sys.stderr)
+
+
 if __name__ == "__main__":
+	main = Main()
+
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-n', '--key-name', type=str, help='Name of PEM key as used by AWS')
+	parser.add_argument('key_name', type=str, help='Name of PEM key as used by AWS')
+	parser.add_argument('-s', '--local-ssh-key', type=str, nargs='?', const=None, default='',
+						help='[Dev machines only] Use an existing SSH key file, rather than grabbing from the environment.\n'
+							 '(Optional argument: path to keyfile, omit to use "~/.ssh/<key_name>.pem")')
+	parser.add_argument('-l', '--label', type=str, nargs='+', action='extend', default=[],
+						help='Label(s) to add to the created runner, in addition to the default.\n'
+							 "Required if `--no-default-labels' is present")
+	parser.add_argument('--no-default-labels', action='store_true',
+						help=f'Omit the default labels ({main.ENV.DEFAULT_RUNNER_LABELS}) from the runner')
 	args = parser.parse_args()
 
-	main = Main(os.environ)
+	# TODO: check duplicates (maybe? not sure how github will handle them)
+	runner_labels = ([] if args.no_default_labels else main.ENV.DEFAULT_RUNNER_LABELS.split(',')) + args.label
+	if len(runner_labels) == 0:
+		print_error("The `--label' argument is required if the `--no-default-labels' option is used")
+		exit(1)
+
+	sshkey = args.local_ssh_key
+	if sshkey is None:
+		sshkey = f'{os.environ["HOME"]}/.ssh/{args.key_name}.pem'
 
 	# safely handle early cleanup()
 	main_runner = Dummy()
 	main_instance = Dummy()
+	atexit.register(cleanup)
 
 	try:
 		main_instance = main.create_instance(args.key_name)
 	except botocore.exceptions.ClientError as err:
-		print('Error: failed to create Eucalyptus instance', file=sys.stderr)
+		print_error('failed to create Eucalyptus instance')
 		# TODO: print exception's error message
 		cleanup()
 		exit(1)  # abort if instance creation failed
 
 	try:
-		main_runner = main.start_runner(main_instance)
+		main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
 	except:
-		print('Error: failed to start self-hosted runner', file=sys.stderr)
+		print_error('failed to start self-hosted runner')
 		cleanup()  # this will error otherwise since main_runner is not defined
 		exit(1)
 
@@ -334,4 +407,4 @@ if __name__ == "__main__":
 	while main_instance.get_state() != 'stopped':
 		time.sleep(30)
 
-	cleanup()
+	exit(0)
