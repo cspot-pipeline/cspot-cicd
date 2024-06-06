@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 
 #include "woofc.h"
@@ -43,29 +44,46 @@ int Verbose;
 
 void *PutThread(void *arg)
 {
-	ST_EL *st;
 	char Iname[4096];
+	ST_EL *st;
 	unsigned long seq_no;
 	char *payload;
 	int i;
+	int size;
 
 	MAKE_EXTENDED_NAME(Iname,Wname,"input");
+	/*
+	 * register backend is not thread safe?
+	 * do this to prime the pump
+	 *
+	 * much faster when each thread does this
+	 */
+	pthread_mutex_lock(&Plock);
+	seq_no = WooFGetLatestSeqno(Iname);
+	pthread_mutex_unlock(&Plock);
+
 	payload = (char *)malloc(Payload_size);
 	if(payload == NULL) {
 		exit(1);
 	}
-	for(i=0; i < Payload_size; i++) {
-		payload[i] = 75;
-	}
+	memset(payload,0,Payload_size);
 	st = (ST_EL *)payload;
-	memset(st,0,sizeof(ST_EL));
-	strcpy(st->woof_name,Wname);
+//	memset(st,0,sizeof(ST_EL));
+	strncpy(st->woof_name,Wname,sizeof(st->woof_name));
+//printf("Put: %ld with %s %s %d\n",
+//pthread_self(),
+//Iname,
+//Wname,
+//Payload_size);
+//fflush(stdout);
 	pthread_mutex_lock(&Plock);
 	while(PutRemaining > 0) {
 		PutRemaining--;
-		pthread_mutex_unlock(&Plock);
 		gettimeofday(&st->posted,NULL);
+//printf("Put: pr: %d\n",PutRemaining);
+		pthread_mutex_unlock(&Plock);
 		seq_no = WooFPut(Iname,"stress_handler",st);
+//printf("Put: seq_no: %ld\n",seq_no);
 		if(WooFInvalid(seq_no)) {
 			fprintf(stderr,"put thread failed\n");
 			fflush(stderr);
@@ -98,6 +116,7 @@ void *GetThread(void *arg)
 	DlistNode *dn;
 	int retries;
 	struct timespec ts;
+	int started = 0;
 	
 	
 
@@ -106,7 +125,10 @@ void *GetThread(void *arg)
 		ts.tv_nsec = 1000000;  /* 2 ms wait time on get */
 	}
 	MAKE_EXTENDED_NAME(Oname,Wname,"output");
-	while((Done == 0) || (Pending->first != NULL)) {
+//printf("Get: %ld starting with %s\n",pthread_self(), Oname);
+//fflush(stdout);
+	while((Done == 0) || (Pending->first != NULL) ||
+			(started == 0)) {
 		if(IsLatency == 0) {
 			nanosleep(&ts,NULL);
 		}
@@ -115,6 +137,7 @@ void *GetThread(void *arg)
 		if(dn != NULL) {
 			DlistDelete(Pending,dn);
 			pthread_mutex_unlock(&Glock);
+			started = 1;
 			retries = 0;
 			seq_no = dn->value.l;
 			while(retries < 30) {
@@ -241,6 +264,13 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&Glock,NULL);
 	PutRemaining = size;
 
+//	char Iname[4096];
+//	unsigned long seq_no;
+//	MAKE_EXTENDED_NAME(Iname,Wname,"input");
+//	pthread_mutex_lock(&Plock);
+//	seq_no = WooFGetLatestSeqno(Iname);
+//	pthread_mutex_unlock(&Plock);
+
 	if(local == 1) {
 		WooFInit();
 	}
@@ -272,6 +302,7 @@ int main(int argc, char **argv)
 	for(i=0; i < pt; i++) {
 		pthread_join(ptids[i],NULL);
 	}
+//printf("Joined with put threads\n");
 
 	if(IsLatency == 0) {
 		sleep(1);
@@ -294,7 +325,11 @@ int main(int argc, char **argv)
 	if(IsLatency == 1) {
 		printf("avg latency: %f ms\n",Total/Count);
 	} else {
-		printf("avg throughput: %f puts/s\n",Count / (Total/1000.0));
+		if(Total > 0) {
+			printf("avg throughput: %f puts/s\n",Count / (Total/1000.0));
+		} else {
+			printf("No timing taken\n");
+		}
 	}
 	
 	return(1);
