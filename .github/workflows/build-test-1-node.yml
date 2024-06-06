@@ -8,7 +8,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: one-script-to-rule-them-all # TODO: change to master before merging
           sparse-checkout: |
             .github/setup_euca.py
             .github/requirements.txt
@@ -19,7 +18,7 @@ jobs:
           cache: 'pip'
       - run: pip install -r .github/requirements.txt
       - name: Make runner
-        run: .github/setup_euca.py codici2 --label single-euca-node --stop-on-error
+        run: .github/setup_euca.py codici2 --label single-euca-node
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -29,7 +28,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           CICD_SSH_KEY: ${{ secrets.CICD_SSH_KEY }}
           EC2_CREATE_TIMEOUT: 450
-          REPO_URL: "https://www.github.com/${{ github.repository }}"
+          REPO_URL: "https://github.com/${{ github.repository }}"
           
   build-test:
     runs-on: [ self-hosted, Linux, x86_64, single-euca-node ]

@@ -211,8 +211,8 @@ class GHActionsRunner(dict):
 				me = r
 				break
 		else:  # configuration failed--we aren't present in the repo's runners list
-			print_error('An unknown error occurred on the runner')
-		# exit(1)
+			print_error("An unknown error occurred on GitHub's runner API")
+			exit(1)
 
 		self.update(me)
 		self.__dict__.update(me)
@@ -235,7 +235,6 @@ class GHActionsRunner(dict):
 		[For ephemeral runners] checks whether the runner has deregistered itself after completing
 		its job
 		"""
-
 		response = requests.get(GHActionsRunner.API_URL + f'/{self.id}',
 								auth=self.auth, headers=self.headers)
 		return not response.ok
@@ -430,11 +429,11 @@ if __name__ == "__main__":
 		# TODO: print exception's error message
 		exit(1)  # abort if instance creation failed
 
-	# try:
-	main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
-	# except:
-	# 	print_error('failed to start self-hosted runner')
-	# 	exit(1)
+	try:
+		main_runner = main.start_runner(main_instance, ssh_key=sshkey, labels=runner_labels)
+	except:
+		print_error('failed to start self-hosted runner')
+		exit(1)
 
 	# wait for CI pipeline to complete and shut down the system
 	# while main_instance.get_state() != 'stopped':
