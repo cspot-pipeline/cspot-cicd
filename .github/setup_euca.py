@@ -181,7 +181,7 @@ class GHActionsRunner(dict):
 				   f'--url {url} --token {self.registration_token} ' \
 				   f'--name {self.name} ' \
 				   f'--labels {",".join(self.labels)}'
-		print(conf_cmd)
+		# print(conf_cmd)
 
 		# note: can add --ephemeral flag below to have the runner auto-delete itself after 1 job
 		_, stdo, stde = host.exec_command(conf_cmd)
