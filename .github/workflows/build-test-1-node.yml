@@ -38,3 +38,5 @@ jobs:
           submodules: recursive
       - name: Build & Install
         run: ./build-install.sh
+      - name: Run Self-Tests
+        run: ./run-self-tests.sh ${{ vars.NUM_SELF_TESTS }}
