@@ -11,6 +11,7 @@ jobs:
           sparse-checkout: |
             .github/setup_euca.py
             .github/requirements.txt
+            .github/run-self-tests.sh
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -39,4 +40,4 @@ jobs:
       - name: Build & Install
         run: ./build-install.sh
       - name: Run Self-Tests
-        run: ./run-self-tests.sh ${{ vars.NUM_SELF_TESTS }}
+        run: ./.github/run-self-tests.sh ${{ vars.NUM_SELF_TESTS }}
